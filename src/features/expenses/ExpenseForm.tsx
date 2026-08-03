@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { CameraCapture } from "@/components/CameraCapture";
+import { ImageUploadPicker } from "@/components/ImageUploadPicker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createExpenseAction } from "@/actions/operationActions";
@@ -301,16 +302,28 @@ export function ExpenseForm({ categories, fournisseurs = [], agencies = [], defa
 
       <div className="space-y-2">
         <Label>Justificatif (Photo / Facture)</Label>
-        <div className="grid grid-cols-2 gap-3 mb-2">
-          <Button type="button" variant="outline" className="h-14 border-primary/20 hover:bg-primary/5 flex flex-col items-center justify-center gap-1" onClick={() => setIsCameraOpen(true)}>
-            <Camera className="w-5 h-5 text-primary" />
-            <span className="text-xs">Prendre photo</span>
-          </Button>
-          <Button type="button" variant="outline" className="h-14 border-primary/20 hover:bg-primary/5 flex flex-col items-center justify-center gap-1" onClick={() => fileInputRef.current?.click()}>
-            <ImageIcon className="w-5 h-5 text-primary" />
-            <span className="text-xs">Galerie / Fichier</span>
-          </Button>
-        </div>
+        {!fileName ? (
+          <ImageUploadPicker 
+            onSelectCamera={() => setIsCameraOpen(true)}
+            onSelectGallery={() => fileInputRef.current?.click()}
+          />
+        ) : (
+          <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg text-sm border mt-3">
+            <FileCheck2 className="w-4 h-4 text-green-600" />
+            <span className="truncate flex-1">{fileName}</span>
+            <Button 
+              type="button" 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => {
+                setFileName(null);
+                if(fileInputRef.current) fileInputRef.current.value = "";
+              }}
+            >
+              Supprimer
+            </Button>
+          </div>
+        )}
 
         <input 
           type="file" 
@@ -326,13 +339,6 @@ export function ExpenseForm({ categories, fournisseurs = [], agencies = [], defa
             }
           }}
         />
-        
-        {fileName && (
-          <div className="flex items-center gap-2 p-3 bg-emerald-500/10 text-emerald-600 rounded-lg border border-emerald-500/20 text-sm font-medium">
-            <FileCheck2 className="w-5 h-5 shrink-0" />
-            <span className="truncate">{fileName}</span>
-          </div>
-        )}
       </div>
 
       <CameraCapture 

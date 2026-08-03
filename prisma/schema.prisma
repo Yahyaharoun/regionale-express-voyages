@@ -121,7 +121,6 @@ model BankObjective {
 model Category {
   id          String  @id @default(uuid())
   nom         String
-  groupe      String // Exploitation, Maintenance, Administration, Fonctionnement
   description String?
   isActive    Boolean @default(true)
 

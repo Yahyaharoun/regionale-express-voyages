@@ -30,7 +30,6 @@ export default function NewCategoryPage() {
     setIsSubmitting(true);
     const formData = new FormData();
     formData.append("nom", data.nom);
-    formData.append("groupe", data.groupe);
     if (data.description) formData.append("description", data.description);
 
     const result = await createCategoryAction(formData);
@@ -73,18 +72,6 @@ export default function NewCategoryPage() {
               <Label htmlFor="nom">Nom de la catégorie <span className="text-destructive">*</span></Label>
               <Input id="nom" placeholder="Ex: Achat carburant, Loyer, etc." {...register("nom")} className="bg-muted/30" />
               {errors.nom && <p className="text-xs text-destructive font-medium">{errors.nom.message}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="groupe">Groupe <span className="text-destructive">*</span></Label>
-              <Input id="groupe" list="groupes" placeholder="Sélectionner ou saisir un nouveau groupe" {...register("groupe")} className="bg-muted/30" />
-              <datalist id="groupes">
-                <option value="Exploitation" />
-                <option value="Maintenance" />
-                <option value="Administration" />
-                <option value="Fonctionnement" />
-              </datalist>
-              {errors.groupe && <p className="text-xs text-destructive font-medium">{errors.groupe.message}</p>}
             </div>
 
             <div className="space-y-2">

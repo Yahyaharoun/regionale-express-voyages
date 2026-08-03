@@ -21,16 +21,16 @@ export async function POST(req: Request) {
     const ipAddress = req.headers.get('x-forwarded-for') || '127.0.0.1';
     const userAgent = req.headers.get('user-agent') || 'unknown';
 
-    // 1. Recherche de l'utilisateur optimisée en base de données
     const nomUpper = nom.toUpperCase().trim();
     
     // On cherche l'ID en SQL brut pour gérer la concaténation nom+prenom efficacement
     const matchingUsers = await prisma.$queryRaw<Array<{ id: string }>>`
       SELECT id FROM "User"
       WHERE UPPER(email) = ${nomUpper}
-         OR UPPER(nom || ' ' || prenom) = ${nomUpper}
-         OR UPPER(prenom || ' ' || nom) = ${nomUpper}
+         OR TRIM(UPPER(nom || ' ' || COALESCE(prenom, ''))) = ${nomUpper}
+         OR TRIM(UPPER(COALESCE(prenom, '') || ' ' || nom)) = ${nomUpper}
          OR UPPER(nom) = ${nomUpper}
+         OR UPPER(prenom) = ${nomUpper}
       LIMIT 1
     `;
 

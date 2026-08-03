@@ -8,6 +8,7 @@ import { OperationDetailsModal } from "@/components/OperationDetailsModal";
 import { ApprovalButtons } from "@/features/expenses/ApprovalButtons";
 import { cn } from "@/lib/utils";
 import { getCurrentUser } from "@/lib/auth";
+import { SyntheseJournaliere } from "@/features/recettes/SyntheseJournaliere";
 
 export default async function DepositsPage() {
   const result = await getOperations(0, 50);
@@ -33,6 +34,8 @@ export default async function DepositsPage() {
           </Button>
         </Link>
       </div>
+
+      <SyntheseJournaliere />
 
       <Card className="border border-border/40 shadow-none bg-card">
         <CardHeader className="pb-3">

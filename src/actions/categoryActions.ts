@@ -23,7 +23,6 @@ export async function createCategoryAction(formData: FormData) {
 
     const rawData = {
       nom: formData.get("nom") as string,
-      groupe: formData.get("groupe") as string,
       description: formData.get("description") as string || undefined,
     };
 
@@ -91,7 +90,6 @@ export async function updateCategoryAction(id: string, formData: FormData) {
 
     const rawData = {
       nom: formData.get("nom") as string,
-      groupe: formData.get("groupe") as string,
       description: formData.get("description") as string || undefined,
     };
 

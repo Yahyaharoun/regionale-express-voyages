@@ -1,7 +1,12 @@
-import { writeFileSync, mkdirSync, existsSync } from "fs";
+import { createClient } from "@supabase/supabase-js";
 import path from "path";
 
-// Vérification basique des "Magic Bytes" pour contrer l'usurpation d'extension
+// Initialisation du client Supabase
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Vérification basique des "Magic Bytes"
 function isValidMagicBytes(buffer: Buffer, ext: string): boolean {
   if (ext === '.pdf') {
     return buffer.length > 4 && buffer[0] === 0x25 && buffer[1] === 0x50 && buffer[2] === 0x44 && buffer[3] === 0x46; // %PDF
@@ -41,11 +46,25 @@ export async function processUpload(file: File | null): Promise<string | null> {
   const cleanName = path.basename(file.name, ext).replace(/[^a-zA-Z0-9]/g, '');
   const filename = `${uniqueSuffix}-${cleanName}${ext}`;
   
-  const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-  if (!existsSync(uploadDir)) {
-    mkdirSync(uploadDir, { recursive: true });
+  // Upload vers le bucket Supabase Storage
+  const { data, error } = await supabase
+    .storage
+    .from('regionale-express-voyage') // Utilisation du bucket spécifié par le PDG
+    .upload(`uploads/${filename}`, buffer, {
+      contentType: file.type,
+      upsert: false
+    });
+
+  if (error) {
+    console.error("Erreur d'upload Supabase:", error);
+    throw new Error("Échec du téléversement vers le serveur de stockage.");
   }
-  
-  writeFileSync(path.join(uploadDir, filename), buffer);
-  return `/uploads/${filename}`;
+
+  // Obtenir l'URL publique
+  const { data: { publicUrl } } = supabase
+    .storage
+    .from('regionale-express-voyage')
+    .getPublicUrl(`uploads/${filename}`);
+
+  return publicUrl;
 }

@@ -27,7 +27,6 @@ export function EditCategoryForm({ category }: { category: any }) {
     resolver: zodResolver(categorySchema),
     defaultValues: {
       nom: category.nom,
-      groupe: category.groupe,
       description: category.description || undefined,
     }
   });
@@ -36,7 +35,6 @@ export function EditCategoryForm({ category }: { category: any }) {
     setIsSubmitting(true);
     const formData = new FormData();
     formData.append("nom", data.nom);
-    formData.append("groupe", data.groupe);
     if (data.description) formData.append("description", data.description);
 
     const result = await updateCategoryAction(category.id, formData);
@@ -74,32 +72,12 @@ export function EditCategoryForm({ category }: { category: any }) {
             <h2 className="font-semibold text-lg">Informations de la catégorie</h2>
           </div>
 
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="nom">Nom de la catégorie <span className="text-destructive">*</span></Label>
                 <Input id="nom" placeholder="Ex: Salaire Employé" {...register("nom")} className="bg-muted/30" />
                 {errors.nom && <p className="text-xs text-destructive font-medium">{errors.nom.message}</p>}
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="groupe">Groupe comptable <span className="text-destructive">*</span></Label>
-                <Select defaultValue={category.groupe} onValueChange={(value) => value && setValue('groupe', value as string)}>
-                  <SelectTrigger className="bg-muted/30">
-                    <SelectValue placeholder="Sélectionner un groupe" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="DEPENSES_OPERATIONNELLES">Dépenses Opérationnelles</SelectItem>
-                    <SelectItem value="CHARGES_SALARIALES">Charges Salariales</SelectItem>
-                    <SelectItem value="IMPOTS_TAXES">Impôts & Taxes</SelectItem>
-                    <SelectItem value="MAINTENANCE">Maintenance</SelectItem>
-                    <SelectItem value="AUTRES">Autres</SelectItem>
-                  </SelectContent>
-                </Select>
-                {errors.groupe && <p className="text-xs text-destructive font-medium">{errors.groupe.message}</p>}
-              </div>
-            </div>
-
             <div className="space-y-2">
               <Label htmlFor="description">Description (Optionnel)</Label>
               <Textarea 
@@ -110,8 +88,7 @@ export function EditCategoryForm({ category }: { category: any }) {
               />
               {errors.description && <p className="text-xs text-destructive font-medium">{errors.description.message}</p>}
             </div>
-          </div>
-
+            </div>
           <div className="pt-6 border-t border-border/40 flex justify-end gap-3">
             <Link href="/dashboard/categories">
               <Button type="button" variant="outline" className="shadow-none">Annuler</Button>

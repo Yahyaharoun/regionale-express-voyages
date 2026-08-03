@@ -4,7 +4,7 @@ import { writeAuditLog } from "@/lib/auditService";
 export class CategoryRepository {
   static async findAll() {
     return prisma.category.findMany({
-      orderBy: { groupe: 'asc' }
+      orderBy: { nom: 'asc' }
     });
   }
 
