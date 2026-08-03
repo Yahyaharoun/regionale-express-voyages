@@ -276,14 +276,14 @@ export function ExpenseForm({ categories, fournisseurs = [], agencies = [], defa
         <Select name="categoryId" required value={selectedCategoryId || undefined} onValueChange={(val) => setSelectedCategoryId(val as string)}>
           <SelectTrigger className="h-11 bg-muted/30">
             {selectedCategory ? (
-              <span className="truncate">{`${selectedCategory.nom} (${selectedCategory.groupe})`}</span>
+              <span className="truncate">{selectedCategory.nom}</span>
             ) : (
               <SelectValue placeholder="Sélectionner une catégorie" />
             )}
           </SelectTrigger>
           <SelectContent>
             {categories.map((cat) => (
-              <SelectItem key={cat.id} value={cat.id}>{`${cat.nom} (${cat.groupe})`}</SelectItem>
+              <SelectItem key={cat.id} value={cat.id}>{cat.nom}</SelectItem>
             ))}
           </SelectContent>
         </Select>

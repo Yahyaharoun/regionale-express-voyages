@@ -74,7 +74,7 @@ export function EditExpenseForm({ categories, operation }: EditExpenseFormProps)
         <Select name="categoryId" required value={selectedCategoryId || undefined} onValueChange={(val) => setSelectedCategoryId(val as string)}>
           <SelectTrigger className="h-11 bg-muted/30">
             {selectedCategory ? (
-              <span className="truncate">{`${selectedCategory.nom} (${selectedCategory.groupe})`}</span>
+              <span className="truncate">{selectedCategory.nom}</span>
             ) : (
               <SelectValue placeholder="Sélectionner une catégorie" />
             )}
@@ -82,7 +82,7 @@ export function EditExpenseForm({ categories, operation }: EditExpenseFormProps)
           <SelectContent>
             {categories.map((cat) => (
               <SelectItem key={cat.id} value={cat.id}>
-                {`${cat.nom} (${cat.groupe})`}
+                {cat.nom}
               </SelectItem>
             ))}
           </SelectContent>

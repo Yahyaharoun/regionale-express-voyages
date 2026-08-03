@@ -67,11 +67,7 @@ export default async function CategoriesPage() {
                 
                 <div className="mt-4">
                   <h3 className="font-bold text-base leading-tight">{category.nom}</h3>
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
-                    <FolderOpen size={14} />
-                    <span>Groupe: </span>
-                    <span className="font-medium text-foreground">{category.groupe}</span>
-                  </div>
+
                 </div>
               </div>
               
