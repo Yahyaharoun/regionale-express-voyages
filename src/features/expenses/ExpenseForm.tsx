@@ -78,14 +78,40 @@ export function ExpenseForm({ categories, fournisseurs = [], agencies = [], defa
       formData.append("montantVerse", finalMontantVerse.toString());
     }
 
-    const result = await createExpenseAction(formData);
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      const payload = Object.fromEntries(formData.entries());
+      const { SyncManager } = await import('@/lib/syncQueue');
+      await SyncManager.enqueue('CREATE', 'Operation', {
+         id: crypto.randomUUID(),
+         type: 'DEPENSE',
+         ...payload
+      });
+      toast.success("Enregistré hors-ligne. En attente de réseau.");
+      router.push("/dashboard/expenses");
+      return;
+    }
 
-    if (result?.error) {
-      setError(result.error);
-      toast.error(result.error);
-      setIsLoading(false);
-    } else {
-      toast.success("Opération soumise avec succès !");
+    try {
+      const result = await createExpenseAction(formData);
+
+      if (result?.error) {
+        setError(result.error);
+        toast.error(result.error);
+        setIsLoading(false);
+      } else {
+        toast.success("Opération soumise avec succès !");
+        router.push("/dashboard/expenses");
+      }
+    } catch (err: any) {
+      // Fallback in case fetch fails due to network mid-flight
+      const payload = Object.fromEntries(formData.entries());
+      const { SyncManager } = await import('@/lib/syncQueue');
+      await SyncManager.enqueue('CREATE', 'Operation', {
+         id: crypto.randomUUID(),
+         type: 'DEPENSE',
+         ...payload
+      });
+      toast.success("Réseau instable. Enregistré hors-ligne.");
       router.push("/dashboard/expenses");
     }
   }

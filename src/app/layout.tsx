@@ -2,6 +2,7 @@ import { Inter } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ConfirmProvider } from "@/hooks/useConfirm";
+import { QueryProvider } from "@/providers/QueryProvider";
 import "./globals.css";
 
 const inter = Inter({
@@ -67,17 +68,19 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col overflow-x-hidden w-full">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <ConfirmProvider>
-            {children}
-            <Toaster position="top-right" />
-          </ConfirmProvider>
-        </ThemeProvider>
+        <QueryProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="light"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <ConfirmProvider>
+              {children}
+              <Toaster position="top-right" />
+            </ConfirmProvider>
+          </ThemeProvider>
+        </QueryProvider>
       </body>
     </html>
   );
