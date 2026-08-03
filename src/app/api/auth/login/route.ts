@@ -27,10 +27,8 @@ export async function POST(req: Request) {
     const matchingUsers = await prisma.$queryRaw<Array<{ id: string }>>`
       SELECT id FROM "User"
       WHERE UPPER(email) = ${nomUpper}
-         OR TRIM(UPPER(nom || ' ' || COALESCE(prenom, ''))) = ${nomUpper}
-         OR TRIM(UPPER(COALESCE(prenom, '') || ' ' || nom)) = ${nomUpper}
-         OR UPPER(nom) = ${nomUpper}
-         OR UPPER(prenom) = ${nomUpper}
+         OR REPLACE(UPPER(COALESCE(nom, '') || COALESCE(prenom, '')), ' ', '') = REPLACE(${nomUpper}, ' ', '')
+         OR REPLACE(UPPER(COALESCE(prenom, '') || COALESCE(nom, '')), ' ', '') = REPLACE(${nomUpper}, ' ', '')
       LIMIT 1
     `;
 
