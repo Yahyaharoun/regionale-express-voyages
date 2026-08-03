@@ -1,0 +1,349 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PDG
+  DG
+  DGA
+  CHEF_AGENCE
+  COMPTABLE
+  CAISSIER
+  SECRETAIRE
+  AGENT
+  AUTRE
+}
+
+enum OperationStatus {
+  BROUILLON
+  EN_ATTENTE
+  VALIDEE_DG
+  VALIDEE
+  REJETEE
+  ANNULEE
+}
+
+enum OperationType {
+  DEPENSE
+  VERSEMENT
+  RECETTE
+  PAIEMENT_FOURNISSEUR
+}
+
+model User {
+  id                  String    @id @default(uuid())
+  email               String    @unique
+  nom                 String
+  prenom              String
+  telephone           String?
+  photoUrl            String?
+  role                Role      @default(AUTRE)
+  pinHash             String?
+  failedAttempts      Int       @default(0)
+  lockedUntil         DateTime?
+  isActive            Boolean   @default(true)
+  agencyId            String?
+  derniereConnexion   DateTime?
+  derniereDeconnexion DateTime?
+
+  roleId              String?
+  appRole             AppRole?  @relation(fields: [roleId], references: [id])
+  createdById         String?
+  updatedById         String?
+  loginLogs           LoginLog[]
+
+  agency      Agency?     @relation(fields: [agencyId], references: [id])
+  operations    Operation[]    @relation("AgentOperations")
+  validations   Operation[]    @relation("ValidateurOperations")
+  auditLogs     AuditLog[]
+  aiLogs        AILog[]
+  notifications Notification[]
+  deviceTokens  DeviceToken[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([agencyId])
+}
+
+model Agency {
+  id          String  @id @default(uuid())
+  nom         String
+  ville       String
+  adresse     String?
+  telephone   String?
+  responsable String?
+  isActive    Boolean @default(true)
+
+  users      User[]
+  operations Operation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Bank {
+  id             String  @id @default(uuid())
+  nom            String
+  numeroCompte   String
+  agenceBancaire String?
+  devise         String  @default("XAF")
+  isActive       Boolean @default(true)
+
+  objectifs  BankObjective[]
+  versements Operation[]     @relation("BankOperations")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BankObjective {
+  id        String   @id @default(uuid())
+  bankId    String
+  montant   Int
+  dateDebut DateTime
+  dateFin   DateTime
+
+  bank Bank @relation(fields: [bankId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([bankId])
+}
+
+model Category {
+  id          String  @id @default(uuid())
+  nom         String
+  groupe      String // Exploitation, Maintenance, Administration, Fonctionnement
+  description String?
+  isActive    Boolean @default(true)
+
+  depenses Operation[] @relation("CategoryOperations")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Operation {
+  id      String          @id @default(uuid())
+  type    OperationType
+  statut  OperationStatus @default(BROUILLON)
+  montant Int
+
+  categoryId  String?
+  commentaire String?
+
+  // Nouveau système Fournisseur / Achats
+  statutPaiement String? // PAYE, IMPAYE, AVANCE
+  montantVerse   Int?    @default(0)
+  montantRestant Int?    @default(0)
+  montantTotal   Int?
+  nombreArticles Int?    @default(0)
+
+  lignes      OperationLine[]
+
+  bankId    String?
+  reference String?
+
+  agencyId      String
+  agentId       String?
+  validateurId  String?
+  fournisseurId String?
+  motifRejet    String?
+  justificatifs String[]
+  dateOperation DateTime @default(now())
+
+  agency     Agency    @relation(fields: [agencyId], references: [id], onDelete: Restrict)
+  category   Category? @relation("CategoryOperations", fields: [categoryId], references: [id], onDelete: SetNull)
+  bank       Bank?     @relation("BankOperations", fields: [bankId], references: [id], onDelete: Restrict)
+  agent      User?     @relation("AgentOperations", fields: [agentId], references: [id], onDelete: SetNull)
+  validateur User?     @relation("ValidateurOperations", fields: [validateurId], references: [id], onDelete: SetNull)
+  fournisseur Fournisseur? @relation("FournisseurOperations", fields: [fournisseurId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([agencyId])
+  @@index([categoryId])
+  @@index([bankId])
+  @@index([agentId])
+  @@index([validateurId])
+  @@index([fournisseurId])
+  @@index([createdAt(sort: Desc)])
+  @@index([dateOperation(sort: Desc)])
+  @@index([agencyId, statut, createdAt(sort: Desc)])
+  @@index([agencyId, createdAt(sort: Desc)])
+  @@index([agencyId, dateOperation(sort: Desc)])
+}
+
+model Fournisseur {
+  id              String  @id @default(uuid())
+  nom             String
+  telephone       String?
+  adresse         String?
+  categorie       String?
+  ville           String?
+  personneContact String?
+  statut          String  @default("ACTIF") // ACTIF, INACTIF
+  
+  paiements       Operation[] @relation("FournisseurOperations")
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String @id @default(uuid())
+  userId    String?
+  role      String
+  action    String
+  tableName String
+  recordId  String
+  oldData   Json?
+  newData   Json?
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model SystemSettings {
+  id                   String  @id @default(uuid())
+  entrepriseNom        String  @default("REGIONALE EXPRESS VOYAGES SARL")
+  entrepriseLogo       String?
+  entrepriseAdresse    String?
+  entrepriseTelephone  String?
+  entrepriseEmail      String?
+  devise               String  @default("XAF")
+  fuseauHoraire        String  @default("Africa/Douala")
+  langue               String  @default("fr")
+  seuilObjectifJaune   Int     @default(80)
+  permissionDgObjectif Boolean @default(false)
+
+  updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  userId      String
+  title       String
+  message     String
+  type        String   @default("INFO") // INFO, SUCCESS, WARNING, ERROR
+  isRead      Boolean  @default(false)
+  operationId String?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt(sort: Desc)])
+}
+
+model AppRole {
+  id          String           @id @default(uuid())
+  name        String           @unique
+  description String?
+  permissions RolePermission[]
+  users       User[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String           @id @default(uuid())
+  name        String           @unique
+  description String?
+  roles       RolePermission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role       AppRole    @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model LoginLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  email     String?  // Can be name if login with name
+  ipAddress String?
+  userAgent String?
+  success   Boolean
+  reason    String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("login_logs")
+}
+
+model AILog {
+  id              String   @id @default(uuid())
+  userId          String
+  role            String
+  question        String
+  functionsCalled String[]
+  createdAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("ai_logs")
+}
+
+model DeviceToken {
+  id         String   @id @default(uuid())
+  userId     String
+  token      String   @unique
+  userAgent  String?
+  isActive   Boolean  @default(true)
+  lastUsed   DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+  @@map("device_tokens")
+}
+
+model OperationLine {
+  id           String @id @default(uuid())
+  operationId  String
+  produit      String
+  prixUnitaire Int
+  quantite     Int
+  montantLigne Int
+
+  operation    Operation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@index([operationId])
+}

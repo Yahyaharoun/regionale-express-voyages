@@ -1,0 +1,48 @@
+PrismaClientValidationError: 
+Invalid `tx.operation.update()` invocation in
+C:\Users\LENOVO\.gemini\antigravity-ide\scratch\regional-express-voyage\.next\dev\server\chunks\ssr\[root-of-the-server]__0s1d378._.js:340:50
+
+  337 await tx.$executeRaw`SELECT set_config('app.current_user_id', ${validateurId}, true)`;
+  338 await tx.$executeRaw`SELECT set_config('app.current_user_role', ${validateurRole}, true)`;
+  339 // 3. Perform the update
+→ 340 const operation = await tx.operation.update({
+        where: {
+          id: "96e272f7-eb7a-408b-acad-25b114419f55"
+        },
+        data: {
+          statut: "VALIDEE_DG",
+                  ~~~~~~~~~~~~
+          validateurId: "91832d42-985a-4ce6-a774-e14b745f0435"
+        }
+      })
+
+Invalid value for argument `statut`. Expected OperationStatus.
+    at Nn (C:\Users\LENOVO\.gemini\antigravity-ide\scratch\regional-express-voyage\node_modules\@prisma\client\runtime\library.js:29:1363)
+    at ei.handleRequestError (C:\Users\LENOVO\.gemini\antigravity-ide\scratch\regional-express-voyage\node_modules\@prisma\client\runtime\library.js:121:6911)
+    at ei.handleAndLogRequestError (C:\Users\LENOVO\.gemini\antigravity-ide\scratch\regional-express-voyage\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\Users\LENOVO\.gemini\antigravity-ide\scratch\regional-express-voyage\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\Users\LENOVO\.gemini\antigravity-ide\scratch\regional-express-voyage\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async C:\Users\LENOVO\.gemini\antigravity-ide\scratch\regional-express-voyage\.next\dev\server\chunks\ssr\[root-of-the-server]__0s1d378._.js:340:31
+    at async Proxy._transactionWithCallback (C:\Users\LENOVO\.gemini\antigravity-ide\scratch\regional-express-voyage\node_modules\@prisma\client\runtime\library.js:130:8120)
+    at async validateOperationAction (C:\Users\LENOVO\.gemini\antigravity-ide\scratch\regional-express-voyage\.next\dev\server\chunks\ssr\[root-of-the-server]__0s1d378._.js:1249:27)
+    at async executeActionAndPrepareForRender (C:\Users\LENOVO\.gemini\antigravity-ide\scratch\regional-express-voyage\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:66:5248)
+    at async C:\Users\LENOVO\.gemini\antigravity-ide\scratch\regional-express-voyage\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:66:1986
+    at async handleAction (C:\Users\LENOVO\.gemini\antigravity-ide\scratch\regional-express-voyage\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:64:26472)
+    at async renderToHTMLOrFlightImpl (C:\Users\LENOVO\.gemini\antigravity-ide\scratch\regional-express-voyage\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:70:55695)
+    at async doRender (C:\Users\LENOVO\.gemini\antigravity-ide\scratch\regional-express-voyage\.next\dev\server\chunks\ssr\node_modules_0ts6_-a._.js:4155:28)
+    at async AppPageRouteModule.handleResponse (C:\Users\LENOVO\.gemini\antigravity-ide\scratch\regional-express-voyage\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:72:67020)
+    at async handleResponse (C:\Users\LENOVO\.gemini\antigravity-ide\scratch\regional-express-voyage\.next\dev\server\chunks\ssr\node_modules_0ts6_-a._.js:4466:32)
+    at async Module.handler (C:\Users\LENOVO\.gemini\antigravity-ide\scratch\regional-express-voyage\.next\dev\server\chunks\ssr\node_modules_0ts6_-a._.js:4872:20)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\Users\LENOVO\.gemini\antigravity-ide\scratch\regional-express-voyage\node_modules\next\dist\server\base-server.js:1462:9)
+    at async DevServer.renderPageComponent (C:\Users\LENOVO\.gemini\antigravity-ide\scratch\regional-express-voyage\node_modules\next\dist\server\base-server.js:1514:24)
+    at async DevServer.renderToResponseImpl (C:\Users\LENOVO\.gemini\antigravity-ide\scratch\regional-express-voyage\node_modules\next\dist\server\base-server.js:1564:32)
+    at async DevServer.pipeImpl (C:\Users\LENOVO\.gemini\antigravity-ide\scratch\regional-express-voyage\node_modules\next\dist\server\base-server.js:1044:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\Users\LENOVO\.gemini\antigravity-ide\scratch\regional-express-voyage\node_modules\next\dist\server\next-server.js:338:17)
+    at async DevServer.handleRequestImpl (C:\Users\LENOVO\.gemini\antigravity-ide\scratch\regional-express-voyage\node_modules\next\dist\server\base-server.js:935:17)
+    at async C:\Users\LENOVO\.gemini\antigravity-ide\scratch\regional-express-voyage\node_modules\next\dist\server\dev\next-dev-server.js:394:20
+    at async Span.traceAsyncFn (C:\Users\LENOVO\.gemini\antigravity-ide\scratch\regional-express-voyage\node_modules\next\dist\trace\trace.js:164:20)
+    at async DevServer.handleRequest (C:\Users\LENOVO\.gemini\antigravity-ide\scratch\regional-express-voyage\node_modules\next\dist\server\dev\next-dev-server.js:390:24)
+    at async invokeRender (C:\Users\LENOVO\.gemini\antigravity-ide\scratch\regional-express-voyage\node_modules\next\dist\server\lib\router-server.js:266:21)
+    at async handleRequest (C:\Users\LENOVO\.gemini\antigravity-ide\scratch\regional-express-voyage\node_modules\next\dist\server\lib\router-server.js:465:24)
+    at async requestHandlerImpl (C:\Users\LENOVO\.gemini\antigravity-ide\scratch\regional-express-voyage\node_modules\next\dist\server\lib\router-server.js:514:13)
+    at async Server.requestListener (C:\Users\LENOVO\.gemini\antigravity-ide\scratch\regional-express-voyage\node_modules\next\dist\server\lib\start-server.js:225:13)
