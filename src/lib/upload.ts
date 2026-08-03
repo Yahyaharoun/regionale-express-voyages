@@ -44,43 +44,46 @@ export async function processUpload(file: File | null): Promise<string | null> {
   const cleanName = path.basename(file.name, ext).replace(/[^a-zA-Z0-9]/g, '');
   const filename = `${uniqueSuffix}-${cleanName}${ext}`;
   
-  // SI ON EST EN LOCAL (DEVELOPMENT) OU SUPABASE NON CONFIGURE
-  if (process.env.NODE_ENV === "development" || !supabase) {
-    try {
-      const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-      await mkdir(uploadDir, { recursive: true });
-      const filepath = path.join(uploadDir, filename);
-      await writeFile(filepath, buffer);
-      return `/uploads/${filename}`;
-    } catch (error) {
-      console.error("Erreur d'upload local:", error);
-      throw new Error("Échec du téléversement en local.");
-    }
-  }
-
-  // SI ON EST EN PRODUCTION (VERCEL)
+  // 1. Tenter l'upload en local (fonctionnera sur l'ordinateur du développeur)
   try {
-    const { error } = await supabase
-      .storage
-      .from('regionale-express-voyage')
-      .upload(`uploads/${filename}`, buffer, {
-        contentType: file.type,
-        upsert: false
-      });
-
-    if (error) {
-      console.error("Erreur d'upload Supabase:", error);
-      throw new Error("Échec du téléversement vers le serveur de stockage.");
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+    await mkdir(uploadDir, { recursive: true });
+    const filepath = path.join(uploadDir, filename);
+    await writeFile(filepath, buffer);
+    return `/uploads/${filename}`;
+  } catch (localError) {
+    console.log("Upload local impossible (probablement sur Vercel), tentative vers Supabase...");
+    
+    // 2. Si ça échoue (Vercel est en lecture seule), on tente Supabase
+    if (!supabaseUrl || !supabaseKey || supabaseUrl.includes("localhost")) {
+      console.error("Upload local a échoué et Supabase n'est pas configuré correctement:", localError);
+      throw new Error(`Échec local: ${(localError as any).message}`);
     }
 
-    const { data: { publicUrl } } = supabase
-      .storage
-      .from('regionale-express-voyage')
-      .getPublicUrl(`uploads/${filename}`);
+    try {
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      const { error } = await supabase
+        .storage
+        .from('regionale-express-voyage')
+        .upload(`uploads/${filename}`, buffer, {
+          contentType: file.type,
+          upsert: false
+        });
 
-    return publicUrl;
-  } catch (error) {
-    console.error("Erreur d'upload:", error);
-    throw new Error("Échec du téléversement vers le serveur de stockage.");
+      if (error) {
+        console.error("Erreur d'upload Supabase:", error);
+        throw new Error(`Échec Supabase: ${error.message}`);
+      }
+
+      const { data: { publicUrl } } = supabase
+        .storage
+        .from('regionale-express-voyage')
+        .getPublicUrl(`uploads/${filename}`);
+
+      return publicUrl;
+    } catch (supabaseError: any) {
+      console.error("Erreur critique d'upload:", supabaseError);
+      throw new Error(`Erreur critique: ${supabaseError.message}`);
+    }
   }
 }

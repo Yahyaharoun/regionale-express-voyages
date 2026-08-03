@@ -12,10 +12,10 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // Ignorer les requêtes statiques et l'API de login
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/auth/login') ||
+    pathname.startsWith('/api/upload') ||
     pathname === '/login' ||
     pathname.includes('.')
   ) {
