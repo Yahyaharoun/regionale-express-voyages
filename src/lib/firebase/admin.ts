@@ -13,6 +13,7 @@ if (!admin.apps.length) {
 
       admin.initializeApp({
         credential: admin.credential.cert(parsedServiceAccount),
+        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "regionale-express-voyage.firebasestorage.app",
       });
       console.log("Firebase Admin Initialized successfully.");
     } else {
@@ -24,3 +25,4 @@ if (!admin.apps.length) {
 }
 
 export const adminMessaging = admin.apps.length ? admin.messaging() : null;
+export const adminStorage = admin.apps.length ? admin.storage() : null;
