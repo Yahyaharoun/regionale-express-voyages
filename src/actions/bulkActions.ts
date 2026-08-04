@@ -6,6 +6,7 @@ import { OperationRepository } from "@/repositories/operationRepository";
 import { getCurrentUser } from "@/lib/auth";
 import { actionRateLimit } from "@/lib/rateLimit";
 import { sendPushNotification } from "@/lib/firebase/fcm";
+import { notifyRolesOnOperationAction } from "@/lib/notificationHelper";
 
 export async function bulkValidateOperationsAction(ids: string[], statut: "VALIDEE" | "REJETEE") {
   try {
@@ -25,27 +26,9 @@ export async function bulkValidateOperationsAction(ids: string[], statut: "VALID
 
     // Notifications
     if (statut === 'VALIDEE') {
-      const pdgUsers = await prisma.user.findMany({
-        where: { role: 'PDG', isActive: true },
-      });
-      if (pdgUsers.length > 0) {
-        await prisma.notification.createMany({
-          data: pdgUsers.map(p => ({
-            userId: p.id,
-            title: `${ids.length} opérations validées`,
-            message: `${ids.length} opérations ont été validées en masse par ${dbUser.prenom} ${dbUser.nom}.`,
-            type: 'SUCCESS',
-            operationId: ids[0] // just the first one as reference
-          }))
-        });
-
-        await sendPushNotification({
-          title: "Opérations validées en masse",
-          body: `${ids.length} opérations validées par ${dbUser.prenom}`,
-          eventType: "OPERATION_VALIDATED_AGENT",
-          url: "/dashboard"
-        }, ["PDG"]);
-      }
+      await notifyRolesOnOperationAction(dbUser.role, `${dbUser.prenom} ${dbUser.nom}`, 'VALIDATED', { type: "Opération", count: ids.length }, "/dashboard");
+    } else {
+      await notifyRolesOnOperationAction(dbUser.role, `${dbUser.prenom} ${dbUser.nom}`, 'REJECTED', { type: "Opération", count: ids.length }, "/dashboard");
     }
 
     // @ts-ignore
@@ -77,6 +60,8 @@ export async function bulkDeleteOperationsAction(ids: string[]) {
 
     const result = await OperationRepository.bulkDelete(ids, dbUser.id, dbUser.role);
 
+    await notifyRolesOnOperationAction(dbUser.role, `${dbUser.prenom} ${dbUser.nom}`, 'DELETED', { type: "Opération", count: ids.length }, "/dashboard");
+
     // @ts-ignore
     revalidateTag('operations');
     revalidatePath("/dashboard/expenses", "page");
@@ -104,6 +89,8 @@ export async function bulkCancelOperationsAction(ids: string[]) {
     }
 
     const result = await OperationRepository.bulkCancel(ids, dbUser.id, dbUser.role);
+
+    await notifyRolesOnOperationAction(dbUser.role, `${dbUser.prenom} ${dbUser.nom}`, 'CANCELLED', { type: "Opération", count: ids.length }, "/dashboard");
 
     // @ts-ignore
     revalidateTag('operations');

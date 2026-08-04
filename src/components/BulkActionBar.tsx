@@ -71,13 +71,6 @@ export function BulkActionBar({ selectedIds, onClearSelection, userRole, editUrl
     `Attention ! Êtes-vous sûr de vouloir supprimer définitivement les ${selectedIds.length} opérations sélectionnées ? Cette action est irréversible.`
   );
   
-  const handleCancel = () => handleAction(
-    (ids) => bulkCancelOperationsAction(ids), 
-    "opérations annulées", 
-    "Annuler la sélection", 
-    `Êtes-vous sûr de vouloir annuler les ${selectedIds.length} opérations sélectionnées ?`
-  );
-
   const handleEdit = () => {
     if (selectedIds.length === 1) {
       router.push(`${editUrlPrefix}/${selectedIds[0]}/edit`);
@@ -114,12 +107,6 @@ export function BulkActionBar({ selectedIds, onClearSelection, userRole, editUrl
           </Button>
         )}
 
-        {userRole !== 'AGENT' && userRole !== 'CAISSIER' && (
-          <Button size="sm" variant="outline" className="border-orange-500/30 text-orange-600 hover:bg-orange-50 bg-orange-50/50" onClick={handleCancel} disabled={isLoading} title="Annuler (Extourner) ces opérations">
-            <Undo2 className="w-4 h-4 mr-1 sm:mr-2" />
-            <span className="text-xs sm:text-sm">Annuler</span>
-          </Button>
-        )}
 
         {canDelete && (
           <Button size="sm" variant="outline" className="border-destructive/30 text-destructive hover:text-destructive hover:bg-destructive/10 bg-destructive/5" onClick={handleDelete} disabled={isLoading}>

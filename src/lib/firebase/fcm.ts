@@ -91,8 +91,8 @@ export async function sendPushNotification(
           body: payload.body,
           icon: "/icons/icon-192x192.png",
           badge: "/icons/icon-72x72.png",
-          vibrate: [200, 100, 200, 100, 200],
-          requireInteraction: false,
+          vibrate: [500, 250, 500, 250, 500],
+          requireInteraction: true,
           tag: payload.eventType,
           renotify: true,
         },
@@ -103,6 +103,29 @@ export async function sendPushNotification(
         headers: {
           Urgency: "high",
           TTL: "86400",
+        }
+      },
+      // Configuration pour Android natif
+      android: {
+        priority: "high" as const,
+        notification: {
+          sound: "default",
+          defaultVibrateTimings: true,
+          defaultSound: true,
+          channelId: "rex-alerts"
+        }
+      },
+      // Configuration pour iOS natif
+      apns: {
+        payload: {
+          aps: {
+            sound: "default",
+            badge: 1,
+            contentAvailable: true
+          }
+        },
+        headers: {
+          "apns-priority": "10"
         }
       },
       data: {

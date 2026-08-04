@@ -29,6 +29,7 @@ import { recetteSchema } from "@/lib/validations/recette";
 import { getCurrentUser } from "@/lib/auth";
 import { actionRateLimit } from "@/lib/rateLimit";
 import { sendPushNotification } from "@/lib/firebase/fcm";
+import { notifyRolesOnOperationAction } from "@/lib/notificationHelper";
 import { canAffordOperation, isAgentRole } from "@/lib/netEnCaisse";
 
 export async function createExpenseAction(formData: FormData) {
@@ -174,34 +175,9 @@ export async function createExpenseAction(formData: FormData) {
       }
     });
 
-    // 5. Notifier PDG + DG quand soumis en attente
-    if (rawData.statut === "EN_ATTENTE") {
-      const notifyUsers = await prisma.user.findMany({
-        where: { role: { in: ['DG', 'PDG'] }, isActive: true }
-      });
-      // Récupérer le nom de l'agence pour enrichir la notification
-      const agencyForExpenseNotif = await prisma.agency.findUnique({ where: { id: targetAgencyId }, select: { nom: true } });
-      const agencyNameExpense = agencyForExpenseNotif?.nom || "";
-      
-      if (notifyUsers.length > 0) {
-        await prisma.notification.createMany({
-          data: notifyUsers.map(m => ({
-            userId: m.id,
-            title: "Nouvelle Dépense à valider",
-            message: `Dépense de ${montant.toLocaleString('fr-FR')} FCFA soumise par ${dbUser.prenom} ${dbUser.nom}${agencyNameExpense ? ` — Agence ${agencyNameExpense}` : ''} — validation requise.`,
-            type: "INFO",
-            operationId: operation.id
-          }))
-        });
+    // 5. Notifications
+    await notifyRolesOnOperationAction(dbUser.role, `${dbUser.prenom} ${dbUser.nom}`, 'CREATED', { montant, type: "Dépense" }, "/dashboard/expenses");
 
-        await sendPushNotification({
-           title: "Nouvelle Dépense à valider",
-           body: `Dépense de ${montant.toLocaleString('fr-FR')} FCFA par ${dbUser.prenom} ${dbUser.nom}${agencyNameExpense ? ` — Agence ${agencyNameExpense}` : ''}`,
-           eventType: "EXPENSE_CREATED",
-           url: "/dashboard/expenses"
-        }, ["DG", "PDG"], undefined, targetAgencyId);
-      }
-    }
 
     revalidatePath("/dashboard/expenses");
     revalidatePath("/dashboard");
