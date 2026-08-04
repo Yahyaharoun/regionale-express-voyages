@@ -69,9 +69,15 @@ export async function createExpenseAction(formData: FormData) {
     }
 
     // 2. Validation Zod stricte des entrées utilisateurs (Anti-Injection / Anti-XSS)
-    const rawData = {
-      montant: parseInt(formData.get("montant") as string, 10),
-      commentaire: formData.get("commentaire") as string,
+      const destinataireManuel = formData.get("destinataireManuel") as string | null;
+      let commentaireStr = formData.get("commentaire") as string;
+      if (destinataireManuel && destinataireManuel.trim() !== "") {
+        commentaireStr = `[Destinataire: ${destinataireManuel.trim()}] ${commentaireStr}`;
+      }
+
+      const rawData = {
+        montant: parseInt(formData.get("montant") as string, 10),
+        commentaire: commentaireStr,
       categoryId: formData.get("categoryId") as string,
       agencyId: targetAgencyId,
       statut: formData.get("statut") as any || "BROUILLON",

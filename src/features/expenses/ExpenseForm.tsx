@@ -252,9 +252,12 @@ export function ExpenseForm({ categories, fournisseurs = [], agencies = [], defa
       )}
 
       {agencies && agencies.length > 0 && (
-        <div className="space-y-2">
-          <Label htmlFor="agencyId" className="after:content-['*'] after:ml-0.5 after:text-red-500">Agence concernée / destinataire</Label>
-          <Select required name="agencyId" value={selectedAgencyId || undefined} onValueChange={(val) => setSelectedAgencyId(val as string)}>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="agencyId" className={initialData ? "after:content-['*'] after:ml-0.5 after:text-red-500" : ""}>
+              Agence concernée {initialData ? "" : "(Optionnel)"}
+            </Label>
+            <Select required={!!initialData} name="agencyId" value={selectedAgencyId || undefined} onValueChange={(val) => setSelectedAgencyId(val as string)}>
             <SelectTrigger className="h-11 bg-muted/30">
               {selectedAgencyId ? (
                 <span className="truncate">{agencies?.find(a => a.id === selectedAgencyId)?.nom}</span>
@@ -277,6 +280,11 @@ export function ExpenseForm({ categories, fournisseurs = [], agencies = [], defa
               </SelectGroup>
             </SelectContent>
           </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="destinataireManuel">Saisie manuelle (ex: Direction)</Label>
+            <Input id="destinataireManuel" name="destinataireManuel" placeholder="Destinataire ou Direction..." className="h-11 bg-muted/30" defaultValue={initialData?.commentaire?.includes('Direction') ? 'Direction' : ''} />
+          </div>
         </div>
       )}
 
