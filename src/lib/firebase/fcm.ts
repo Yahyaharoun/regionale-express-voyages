@@ -104,6 +104,7 @@ export async function sendPushNotification(
           Urgency: "high",
           TTL: "86400",
         }
+      },
       data: {
         url: payload.url || "/dashboard",
         eventId: payload.eventId || "",
