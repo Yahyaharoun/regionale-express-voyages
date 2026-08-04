@@ -95,8 +95,6 @@ export async function sendPushNotification(
           requireInteraction: true,
           tag: payload.eventType,
           renotify: true,
-          // Timestamp pour que l'OS affiche l'heure correcte
-          timestamp: Date.now(),
         },
         fcmOptions: {
           link: payload.url || "/dashboard"
