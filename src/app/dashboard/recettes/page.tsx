@@ -66,7 +66,7 @@ export default async function DepositsPage() {
                     <div>
                       <p className="text-sm font-semibold">{op.commentaire || "Recette"}</p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(op.createdAt).toLocaleDateString("fr-FR")} • {op.statut}
+                        {new Date(op.createdAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })} • {op.statut}
                       </p>
                     </div>
                   </div>

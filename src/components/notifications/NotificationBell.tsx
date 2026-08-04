@@ -148,7 +148,7 @@ export function NotificationBell({ userId }: { userId: string }) {
                   <div className="flex items-start justify-between gap-2">
                     <span className="font-semibold text-sm leading-none">{notif.title}</span>
                     <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                      {new Date(notif.createdAt).toLocaleDateString()}
+                      {new Date(notif.createdAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground leading-snug mt-1">

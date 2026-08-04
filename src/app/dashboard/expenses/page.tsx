@@ -94,7 +94,7 @@ export default async function ExpensesPage(props: { searchParams: Promise<{ [key
                       {op.statut.replace('_', ' ')}
                     </span>
                   </div>
-                  <p className="text-xs text-muted-foreground font-medium mt-1.5">{op.category?.nom || op.type} • {new Date(op.createdAt).toLocaleDateString('fr-FR')}</p>
+                  <p className="text-xs text-muted-foreground font-medium mt-1.5">{op.category?.nom || op.type} • {new Date(op.createdAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</p>
                 </div>
               </div>
               

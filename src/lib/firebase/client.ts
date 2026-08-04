@@ -26,15 +26,32 @@ if (typeof window !== "undefined" && firebaseConfig.projectId) {
 export const getFirebaseMessaging = () => messaging;
 
 /**
+ * Enregistre ou récupère le Service Worker Firebase.
+ */
+export async function getOrRegisterServiceWorker(): Promise<ServiceWorkerRegistration | null> {
+  if (!("serviceWorker" in navigator)) return null;
+  
+  try {
+    let registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js');
+    if (!registration) {
+      registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    }
+    return await navigator.serviceWorker.ready;
+  } catch (err) {
+    console.warn("[SW] Erreur d'enregistrement :", err);
+    return null;
+  }
+}
+
+/**
  * Envoie la config Firebase au Service Worker afin d'éliminer
  * toute race condition lors du démarrage du SW.
  * À appeler UNE SEULE FOIS après l'enregistrement du SW.
  */
 export async function sendConfigToServiceWorker(): Promise<void> {
   try {
-    if (!("serviceWorker" in navigator)) return;
-    const registration = await navigator.serviceWorker.ready;
-    if (registration.active) {
+    const registration = await getOrRegisterServiceWorker();
+    if (registration && registration.active) {
       registration.active.postMessage({
         type: "FIREBASE_CONFIG",
         config: firebaseConfig,
@@ -73,8 +90,8 @@ export const onForegroundMessage = (): Unsubscribe | null => {
     };
 
     try {
-      if ("serviceWorker" in navigator) {
-        const registration = await navigator.serviceWorker.ready;
+      const registration = await getOrRegisterServiceWorker();
+      if (registration) {
         // Utilisation du SW garantit le meilleur support natif (PWA iOS, Android, Desktop)
         await registration.showNotification(title, options);
       } else {
@@ -108,8 +125,9 @@ export const requestFirebaseToken = async (): Promise<string | null> => {
     }
 
     // S'assurer que le SW est bien enregistré avant de demander le token
-    if ("serviceWorker" in navigator) {
-      const registration = await navigator.serviceWorker.ready;
+    const registration = await getOrRegisterServiceWorker();
+    
+    if (registration) {
       // Envoyer la config au SW pour s'assurer qu'il est correctement initialisé
       await sendConfigToServiceWorker();
 
