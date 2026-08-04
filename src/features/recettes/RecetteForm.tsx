@@ -27,10 +27,17 @@ export function RecetteForm({ agencys = [] }: RecetteFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
 
-  async function onSubmit(formData: FormData) {
+  const isSubmitting = useRef(false);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (isSubmitting.current) return;
+    
+    isSubmitting.current = true;
     setIsLoading(true);
     setError(null);
 
+    const formData = new FormData(e.currentTarget);
     formData.append("statut", "EN_ATTENTE");
 
     if (selectedAgencyId) {
@@ -43,6 +50,7 @@ export function RecetteForm({ agencys = [] }: RecetteFormProps) {
       setError(result.error);
       toast.error(result.error);
       setIsLoading(false);
+      isSubmitting.current = false;
     } else {
       toast.success("Recette journalière soumise avec succès !");
       router.push("/dashboard/recettes");
@@ -50,7 +58,7 @@ export function RecetteForm({ agencys = [] }: RecetteFormProps) {
   }
 
   return (
-    <form action={onSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
         <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-lg font-medium">
           {error}

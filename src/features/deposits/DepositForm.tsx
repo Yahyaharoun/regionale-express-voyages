@@ -29,10 +29,17 @@ export function DepositForm({ banks, agencies = [] }: DepositFormProps) {
 
   const selectedBank = banks.find(b => b.id === selectedBankId);
 
-  async function onSubmit(formData: FormData) {
+  const isSubmitting = useRef(false);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (isSubmitting.current) return;
+    
+    isSubmitting.current = true;
     setIsLoading(true);
     setError(null);
 
+    const formData = new FormData(e.currentTarget);
     formData.append("statut", "EN_ATTENTE");
 
     const result = await createDepositAction(formData);
@@ -41,6 +48,7 @@ export function DepositForm({ banks, agencies = [] }: DepositFormProps) {
       setError(result.error);
       toast.error(result.error);
       setIsLoading(false);
+      isSubmitting.current = false;
     } else {
       toast.success("Versement soumis avec succès !");
       router.push("/dashboard/deposits");
@@ -48,7 +56,7 @@ export function DepositForm({ banks, agencies = [] }: DepositFormProps) {
   }
 
   return (
-    <form action={onSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
         <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-lg font-medium">
           {error}

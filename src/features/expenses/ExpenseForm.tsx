@@ -49,16 +49,24 @@ export function ExpenseForm({ categories, fournisseurs = [], agencies = [], defa
     setLignes(newLignes);
   };
 
-  async function onSubmit(formData: FormData) {
+  const isSubmitting = useRef(false);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (isSubmitting.current) return;
+    
+    isSubmitting.current = true;
     setIsLoading(true);
     setError(null);
 
+    const formData = new FormData(e.currentTarget);
     formData.append("statut", "EN_ATTENTE");
 
     if (isSupplierMode) {
       if (lignes.length === 0 || !lignes[0].produit) {
         setError("Veuillez saisir au moins un produit.");
         setIsLoading(false);
+        isSubmitting.current = false;
         return;
       }
       formData.set("montant", montantTotalCalculated.toString());
@@ -73,6 +81,7 @@ export function ExpenseForm({ categories, fournisseurs = [], agencies = [], defa
       if (finalMontantVerse > montantTotalCalculated) {
         setError(`Le montant versé (${finalMontantVerse} FCFA) ne peut pas dépasser le total (${montantTotalCalculated} FCFA).`);
         setIsLoading(false);
+        isSubmitting.current = false;
         return;
       }
 
@@ -99,8 +108,9 @@ export function ExpenseForm({ categories, fournisseurs = [], agencies = [], defa
         setError(result.error);
         toast.error(result.error);
         setIsLoading(false);
+        isSubmitting.current = false;
       } else {
-        toast.success("Opération soumise avec succès !");
+        toast.success("Dépense soumise avec succès !");
         router.push("/dashboard/expenses");
       }
     } catch (err: any) {
@@ -118,7 +128,7 @@ export function ExpenseForm({ categories, fournisseurs = [], agencies = [], defa
   }
 
   return (
-    <form action={onSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
         <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-lg font-medium">
           {error}
