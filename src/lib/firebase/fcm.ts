@@ -92,7 +92,7 @@ export async function sendPushNotification(
           icon: "/icons/icon-192x192.png",
           badge: "/icons/icon-72x72.png",
           vibrate: [200, 100, 200, 100, 200],
-          requireInteraction: true,
+          requireInteraction: false,
           tag: payload.eventType,
           renotify: true,
         },
@@ -104,32 +104,6 @@ export async function sendPushNotification(
           Urgency: "high",
           TTL: "86400",
         }
-      },
-      // Configuration pour applications Android natives (si applicable)
-      android: {
-        priority: "high" as const,
-        notification: {
-          icon: "ic_notification",
-          channelId: "rex-finance-channel",
-          priority: "high" as const,
-          defaultSound: true,
-          defaultVibrateTimings: true,
-        }
-      },
-      // Configuration pour iOS (APNs via FCM)
-      apns: {
-        headers: {
-          "apns-priority": "10",
-        },
-        payload: {
-          aps: {
-            sound: "default",
-            badge: 1,
-            contentAvailable: true,
-            mutableContent: true,
-          }
-        }
-      },
       data: {
         url: payload.url || "/dashboard",
         eventId: payload.eventId || "",

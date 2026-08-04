@@ -1,0 +1,1 @@
+import { PrismaClient } from '@prisma/client'; const prisma = new PrismaClient(); prisma.auditLog.findMany({ where: { action: { in: ['PUSH_SENT', 'PUSH_TEST_SUCCESS', 'PUSH_TEST_FAILED'] } }, orderBy: { createdAt: 'desc' }, take: 10 }).then(console.log).finally(() => prisma.$disconnect());
