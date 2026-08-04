@@ -17,6 +17,10 @@ const serwist = new Serwist({
   clientsClaim: true,
   navigationPreload: true,
   runtimeCaching: [
+    {
+      matcher: ({ url }) => url.pathname.startsWith('/api/auth') || url.host.includes('supabase.co'),
+      handler: new NetworkOnly(),
+    },
     ...defaultCache,
     {
       matcher: ({ request }) => request.method === 'POST',

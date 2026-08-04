@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { verifyPin, encryptSession } from '@/lib/auth';
 import { cookies } from 'next/headers';
+import { actionRateLimit } from '@/lib/rateLimit';
 
 const prisma = new PrismaClient();
 const MAX_FAILED_ATTEMPTS = 5;
@@ -20,6 +21,14 @@ export async function POST(req: Request) {
 
     const ipAddress = req.headers.get('x-forwarded-for') || '127.0.0.1';
     const userAgent = req.headers.get('user-agent') || 'unknown';
+
+    const isRateLimited = await actionRateLimit.check(ipAddress);
+    if (!isRateLimited) {
+      await prisma.loginLog.create({
+        data: { email: nom, ipAddress, userAgent, success: false, reason: 'Rate Limit Exceeded' }
+      });
+      return NextResponse.json({ error: 'Trop de requêtes. Veuillez réessayer dans quelques instants.' }, { status: 429 });
+    }
 
     const nomUpper = nom.toUpperCase().trim();
     

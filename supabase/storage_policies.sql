@@ -17,7 +17,8 @@ CREATE POLICY "Agents can upload receipts to their agency folder" ON storage.obj
     TO authenticated
     WITH CHECK (
         bucket_id = 'justificatifs' AND
-        (storage.foldername(name))[1] = (auth.jwt() ->> 'agencyId')::text
+        (storage.foldername(name))[1] = (auth.jwt() ->> 'agencyId')::text AND
+        (storage.extension(name) = 'jpg' OR storage.extension(name) = 'jpeg' OR storage.extension(name) = 'png' OR storage.extension(name) = 'webp' OR storage.extension(name) = 'pdf')
     );
 
 -- 2. AGENT : Peut lire les reçus de son agence
