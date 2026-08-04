@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { OperationActionsMenu } from "@/components/OperationActionsMenu";
 import { OperationDetailsModal } from "@/components/OperationDetailsModal";
-import { ApprovalButtons } from "@/features/expenses/ApprovalButtons";
+import { OperationListClient } from "@/features/operations/OperationListClient";
 import { getCurrentUser } from "@/lib/auth";
 
 export default async function DepositsPage() {
@@ -33,67 +33,11 @@ export default async function DepositsPage() {
         </Link>
       </div>
 
-      <Card className="border border-border/40 shadow-none bg-card">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-            <ArrowRightLeft size={14} />
-            Versements bancaires récents
-          </CardTitle>
-          <CardDescription>{deposits.length} versement(s) trouvé(s)</CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          {deposits.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground text-sm">
-              aucun versement bancaire enregistré pour le moment.
-            </div>
-          ) : (
-            <div className="divide-y divide-border/20">
-              {deposits.map((op) => (
-                <div key={op.id} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      op.statut === "VALIDEE" ? "bg-emerald-500/10 text-emerald-500" :
-                      op.statut === "EN_ATTENTE" ? "bg-amber-500/10 text-amber-500" :
-                      "bg-muted text-muted-foreground"
-                    }`}>
-                      {op.statut === "VALIDEE" ? <CheckCircle2 size={14} /> : <Clock size={14} />}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold">{op.commentaire || "Versement"}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(op.createdAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })} • {op.statut}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <p className="text-sm font-bold text-emerald-500">
-                      +{op.montant.toLocaleString("fr-FR")} FCFA
-                    </p>
-                    {op.statut === 'EN_ATTENTE' && (role === 'PDG' || role === 'DG') ? (
-                      <div className="flex gap-2 items-center">
-                        <OperationDetailsModal operation={op} />
-                        <ApprovalButtons operationId={op.id} />
-                      </div>
-                    ) : (
-                      <div className="flex gap-2 items-center">
-                        <OperationDetailsModal operation={op} />
-                        <OperationActionsMenu 
-                          id={op.id} 
-                          type={op.type} 
-                          statut={op.statut} 
-                          onEditUrl={`/dashboard/deposits/${op.id}/edit`} 
-                          userRole={role}
-                          canValidate={canValidate}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <OperationListClient 
+        operations={deposits} 
+        role={role} 
+        editUrlPrefix="/dashboard/deposits" 
+      />
     </div>
   );
 }

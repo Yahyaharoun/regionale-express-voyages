@@ -12,24 +12,33 @@ export class OperationRepository {
       async () => {
         let dateFilter = {};
         if (range && range !== 'all') {
-          const now = new Date();
-          let start = new Date(0);
-          let end = new Date(now.getFullYear() + 10, 0, 1);
+          // Utilisation du fuseau horaire UTC+1 (Cameroun/Afrique Centrale)
+          const offset = 1; 
+          const nowUtc = new Date();
+          const localNow = new Date(nowUtc.getTime() + (offset * 3600000));
+          
+          const year = localNow.getUTCFullYear();
+          const month = localNow.getUTCMonth();
+          const date = localNow.getUTCDate();
+          
+          let start: Date | null = null;
+          let end: Date | null = null;
           
           if (range === 'jour' || range === 'today') {
-            start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+            start = new Date(Date.UTC(year, month, date, -offset, 0, 0, 0));
+            end = new Date(Date.UTC(year, month, date, 23 - offset, 59, 59, 999));
           } else if (range === 'semaine') {
-            const day = now.getDay() || 7;
-            start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day + 1);
-            end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6, 23, 59, 59, 999);
+            const day = localNow.getUTCDay() || 7; // 1-7
+            start = new Date(Date.UTC(year, month, date - day + 1, -offset, 0, 0, 0));
+            end = new Date(Date.UTC(year, month, date + (7 - day), 23 - offset, 59, 59, 999));
           } else if (range === 'mois') {
-            start = new Date(now.getFullYear(), now.getMonth(), 1);
-            end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+            start = new Date(Date.UTC(year, month, 1, -offset, 0, 0, 0));
+            end = new Date(Date.UTC(year, month + 1, 0, 23 - offset, 59, 59, 999));
           } else if (range === 'annee') {
-            start = new Date(now.getFullYear(), 0, 1);
-            end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+            start = new Date(Date.UTC(year, 0, 1, -offset, 0, 0, 0));
+            end = new Date(Date.UTC(year, 11, 31, 23 - offset, 59, 59, 999));
           }
+          
           if (start && end) {
             dateFilter = { dateOperation: { gte: start, lte: end } };
           }
@@ -40,7 +49,7 @@ export class OperationRepository {
           whereClause.agencyId = agencyId;
         }
 
-        return prisma.operation.findMany({
+        const results = await prisma.operation.findMany({
           where: whereClause,
           skip,
           take,
@@ -54,6 +63,19 @@ export class OperationRepository {
             bank: true
           }
         });
+
+        // Tri personnalisé : éléments non validés en premier
+        results.sort((a, b) => {
+          const aPending = ['EN_ATTENTE', 'BROUILLON', 'A_VALIDER'].includes(a.statut);
+          const bPending = ['EN_ATTENTE', 'BROUILLON', 'A_VALIDER'].includes(b.statut);
+          if (aPending && !bPending) return -1;
+          if (!aPending && bPending) return 1;
+          const timeA = new Date(a.dateOperation || a.createdAt).getTime();
+          const timeB = new Date(b.dateOperation || b.createdAt).getTime();
+          return timeB - timeA;
+        });
+
+        return results;
       },
       [`operations-${agencyId}-${skip}-${take}-${range || 'all'}`],
       { tags: ['operations', `operations-${agencyId}`], revalidate: 60 }
@@ -71,6 +93,12 @@ export class OperationRepository {
       await tx.$executeRaw`SELECT set_config('app.current_user_id', ${agentId}, true)`;
       await tx.$executeRaw`SELECT set_config('app.current_user_role', ${agentRole}, true)`;
       await tx.$executeRaw`SELECT set_config('app.current_user_agency', ${agencyId}, true)`;
+
+      // Auto-validation pour PDG et DG
+      if (agentRole === 'PDG' || agentRole === 'DG') {
+        data.statut = 'VALIDEE';
+        data.validateur = { connect: { id: agentId } };
+      }
 
       // 2. Perform the actual creation
       const operation = await tx.operation.create({
@@ -248,6 +276,105 @@ export class OperationRepository {
       });
 
       return updatedOp;
+    });
+  }
+
+  // --- BULK ACTIONS ---
+
+  static async bulkUpdateStatus(ids: string[], statut: "VALIDEE" | "REJETEE" | "VALIDEE_DG", validateurId: string, validateurRole: string = 'DGA') {
+    return prisma.$transaction(async (tx) => {
+      const previousOps = await tx.operation.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, statut: true, montant: true, agencyId: true, type: true, agentId: true },
+      });
+
+      await tx.$executeRaw`SELECT set_config('app.current_user_id', ${validateurId}, true)`;
+      await tx.$executeRaw`SELECT set_config('app.current_user_role', ${validateurRole}, true)`;
+
+      await tx.operation.updateMany({
+        where: { id: { in: ids } },
+        data: { statut, validateurId }
+      });
+
+      await writeAuditLog(tx, {
+        userId: validateurId,
+        role: validateurRole,
+        action: statut === 'VALIDEE' ? 'BULK_VALIDATE' : 'BULK_REJECT',
+        tableName: 'Operation',
+        recordId: 'BULK',
+        oldData: { count: ids.length, ids },
+        newData: { statut },
+      });
+
+      const notifications = previousOps.filter(op => op.agentId).map(op => ({
+        userId: op.agentId!,
+        title: statut === 'VALIDEE' ? 'Opération validée' : 'Opération rejetée',
+        message: `Votre opération de ${op.montant} FCFA a été ${statut.toLowerCase()}.`,
+        type: statut === 'VALIDEE' ? 'SUCCESS' : 'ERROR',
+        operationId: op.id,
+      }));
+
+      if (notifications.length > 0) {
+        await tx.notification.createMany({ data: notifications });
+      }
+
+      return previousOps;
+    });
+  }
+
+  static async bulkDelete(ids: string[], agentId: string, role: string) {
+    const AGENT_ONLY_ROLES = ['AGENT', 'CAISSIER', 'DGA', 'CHEF_AGENCE', 'COMPTABLE', 'SECRETAIRE', 'AUTRE'];
+    if (AGENT_ONLY_ROLES.includes(role)) throw new Error("Permission refusée.");
+
+    return prisma.$transaction(async (tx) => {
+      const ops = await tx.operation.findMany({ where: { id: { in: ids } } });
+      if (ops.some(op => op.statut === "VALIDEE") && role !== 'PDG' && role !== 'DG') {
+        throw new Error("Impossible de supprimer des opérations validées.");
+      }
+
+      await tx.$executeRaw`SELECT set_config('app.current_user_id', ${agentId}, true)`;
+      await tx.$executeRaw`SELECT set_config('app.current_user_role', ${role}, true)`;
+
+      const { count } = await tx.operation.deleteMany({ where: { id: { in: ids } } });
+
+      await writeAuditLog(tx, {
+        userId: agentId,
+        role: role,
+        action: 'BULK_DELETE',
+        tableName: 'Operation',
+        recordId: 'BULK',
+        oldData: { count, ids },
+        newData: null,
+      });
+
+      return { count };
+    });
+  }
+
+  static async bulkCancel(ids: string[], agentId: string, role: string) {
+    const AGENT_ONLY_ROLES = ['AGENT', 'CAISSIER', 'DGA', 'CHEF_AGENCE', 'COMPTABLE', 'SECRETAIRE', 'AUTRE'];
+    if (AGENT_ONLY_ROLES.includes(role)) throw new Error("Permission refusée.");
+
+    return prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT set_config('app.current_user_id', ${agentId}, true)`;
+      await tx.$executeRaw`SELECT set_config('app.current_user_role', ${role}, true)`;
+
+      const { count } = await tx.operation.updateMany({
+        where: { id: { in: ids } },
+        data: { statut: "ANNULEE" }
+      });
+
+      await writeAuditLog(tx, {
+        userId: agentId,
+        role: role,
+        action: 'BULK_CANCEL',
+        tableName: 'Operation',
+        recordId: 'BULK',
+        oldData: { ids },
+        newData: { statut: "ANNULEE" },
+      });
+
+      return { count };
     });
   }
 }

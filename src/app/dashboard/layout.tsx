@@ -23,6 +23,7 @@ import { decryptSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { LogoutButton } from "@/components/LogoutButton";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { RefreshButton } from "@/components/RefreshButton";
 
 const CopilotWidget = dynamic(
   () => import("@/features/ai/CopilotWidget").then((mod) => mod.CopilotWidget)
@@ -57,7 +58,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </div>
           <span className="tracking-tight">Dashboard</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
+          <RefreshButton />
           {userId && <NotificationBell userId={userId} />}
           <Sheet>
             <SheetTrigger render={<Button variant="ghost" size="icon" aria-label="Menu principal" />}>
@@ -271,7 +273,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Desktop Topbar */}
         <header className="hidden md:flex h-16 items-center justify-end px-8 border-b border-border/40 glass sticky top-0 z-30">
-          {userId && <NotificationBell userId={userId} />}
+          <div className="flex items-center gap-2">
+            <RefreshButton />
+            {userId && <NotificationBell userId={userId} />}
+          </div>
         </header>
         
         <div className="flex-1 overflow-y-auto p-4 md:p-8 pb-28 md:pb-8">
