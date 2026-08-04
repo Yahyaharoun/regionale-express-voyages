@@ -298,14 +298,11 @@ export async function createDepositAction(formData: FormData) {
           }))
         });
 
-        await sendPushNotification({
-           title: "Nouveau Versement bancaire à valider",
-           body: `Versement de ${montant.toLocaleString('fr-FR')} FCFA par ${dbUser.prenom} ${dbUser.nom}${agencyName ? ` — Agence ${agencyName}` : ''}`,
-           eventType: "DEPOSIT_CREATED",
-           url: "/dashboard/deposits"
-        }, ["DG", "PDG"], undefined, targetAgencyId);
       }
     }
+    
+    // Notifications
+    await notifyRolesOnOperationAction(dbUser.role, `${dbUser.prenom} ${dbUser.nom}`, 'CREATED', { montant, type: "Versement bancaire" }, "/dashboard/deposits");
 
     revalidatePath("/dashboard/deposits");
     revalidatePath("/dashboard");
