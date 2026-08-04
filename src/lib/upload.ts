@@ -37,8 +37,9 @@ export async function processUpload(file: File | null): Promise<string | null> {
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
 
-  // Laissons passer si magic bytes imparfait
-  // isValidMagicBytes(buffer, ext)
+  if (!isValidMagicBytes(buffer, ext)) {
+    throw new Error("Le contenu du fichier ne correspond pas à son extension (Fichier potentiellement malveillant).");
+  }
 
   const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
   const cleanName = path.basename(file.name, ext).replace(/[^a-zA-Z0-9]/g, '');

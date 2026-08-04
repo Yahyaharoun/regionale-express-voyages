@@ -13,7 +13,7 @@ export async function createBankAction(formData: FormData) {
     if (!user) return { error: "Non autorisé." };
 
     const dbUser = await prisma.user.findUnique({ where: { id: user.userId } });
-    if (!dbUser || !['PDG', 'DG', 'DGA', 'AGENT'].includes(dbUser.role)) {
+    if (!dbUser || !['PDG', 'DG', 'DGA'].includes(dbUser.role)) {
       return { error: "Permission refusée. Rôle requis." };
     }
 

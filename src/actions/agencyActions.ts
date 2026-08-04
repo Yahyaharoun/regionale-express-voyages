@@ -15,7 +15,7 @@ export async function createAgencyAction(formData: FormData) {
     }
 
     const dbUser = await prisma.user.findUnique({ where: { id: user.userId } });
-    if (!dbUser || !['PDG', 'DG', 'DGA', 'AGENT'].includes(dbUser.role)) {
+    if (!dbUser || !['PDG', 'DG', 'DGA'].includes(dbUser.role)) {
       return { error: "Permission refusée. Rôle PDG/DG/AGENT requis." };
     }
 
@@ -91,7 +91,7 @@ export async function toggleAgencyStatusAction(id: string, currentStatus: boolea
     if (!user) return { error: "Non autorisé." };
 
     const dbUser = await prisma.user.findUnique({ where: { id: user.userId } });
-    if (!dbUser || !['PDG', 'DG', 'DGA', 'AGENT'].includes(dbUser.role)) {
+    if (!dbUser || !['PDG', 'DG', 'DGA'].includes(dbUser.role)) {
       return { error: "Permission refusée. Rôle PDG/DG/AGENT requis." };
     }
 
@@ -111,7 +111,7 @@ export async function updateAgencyAction(id: string, formData: FormData) {
     if (!user) return { error: "Non autorisé." };
 
     const dbUser = await prisma.user.findUnique({ where: { id: user.userId } });
-    if (!dbUser || !['PDG', 'DG', 'DGA', 'AGENT'].includes(dbUser.role)) {
+    if (!dbUser || !['PDG', 'DG', 'DGA'].includes(dbUser.role)) {
       return { error: "Permission refusée. Rôle PDG/DG/AGENT requis." };
     }
 
@@ -156,7 +156,7 @@ export async function deleteAgencyAction(id: string) {
     if (!user) return { error: "Non autorisé." };
 
     const dbUser = await prisma.user.findUnique({ where: { id: user.userId } });
-    if (!dbUser || !['PDG', 'DG', 'DGA', 'AGENT'].includes(dbUser.role)) {
+    if (!dbUser || !['PDG', 'DG', 'DGA'].includes(dbUser.role)) {
       return { error: "Permission refusée. Rôle PDG/DG/AGENT requis." };
     }
 
