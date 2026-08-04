@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,22 +21,34 @@ export function EditDepositForm({ banks, operation }: EditDepositFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedBankId, setSelectedBankId] = useState<string>(operation.bankId || "");
+  const isSubmitting = useRef(false);
 
   const selectedBank = banks.find(b => b.id === selectedBankId);
 
   async function onSubmit(formData: FormData) {
+    if (isSubmitting.current) return;
+    isSubmitting.current = true;
     setIsLoading(true);
     setError(null);
 
-    const result = await updateDepositAction(operation.id, formData);
+    try {
+      const result = await updateDepositAction(operation.id, formData);
 
-    if (result?.error) {
-      setError(result.error);
-      toast.error(result.error);
+      if (result?.error) {
+        setError(result.error);
+        toast.error(result.error);
+      } else {
+        toast.success("Versement modifié avec succès !");
+        router.push("/dashboard/deposits");
+        return;
+      }
+    } catch (err: any) {
+      const msg = err?.message || "Une erreur inattendue s'est produite.";
+      setError(msg);
+      toast.error(msg);
+    } finally {
       setIsLoading(false);
-    } else {
-      toast.success("Versement modifié avec succès !");
-      router.push("/dashboard/deposits");
+      isSubmitting.current = false;
     }
   }
 

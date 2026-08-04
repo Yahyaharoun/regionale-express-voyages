@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Bell, Check, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +29,8 @@ interface Notification {
 export function NotificationBell({ userId }: { userId: string }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  // Ref pour stocker la fonction d'unsubscription FCM foreground
+  const fcmUnsubscribeRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     // 1. Charger les notifications initiales
@@ -41,39 +43,65 @@ export function NotificationBell({ userId }: { userId: string }) {
     };
     fetchNotifications();
 
-    import("@/lib/firebase/client").then(({ onForegroundMessage }) => {
-      onForegroundMessage();
+    // 2. Initialiser le listener foreground Firebase UNE SEULE FOIS
+    // et conserver la fonction de nettoyage pour éviter les memory leaks
+    import("@/lib/firebase/client").then(({ onForegroundMessage, sendConfigToServiceWorker }) => {
+      // Envoyer la config Firebase au SW pour éviter la race condition
+      sendConfigToServiceWorker().catch(console.warn);
+
+      // S'abonner aux messages foreground et conserver l'unsubscribe
+      if (!fcmUnsubscribeRef.current) {
+        const unsubscribe = onForegroundMessage();
+        if (unsubscribe) {
+          fcmUnsubscribeRef.current = unsubscribe;
+        }
+      }
     });
 
-    // 2. Souscrire aux changements en temps réel
+    // 3. Souscrire aux changements Supabase Realtime
     const supabase = createClient();
     const channelId = `realtime-notif-${userId}-${Math.random().toString(36).substring(2, 9)}`;
     const channel = supabase
       .channel(channelId)
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'Notification',
+          event: "INSERT",
+          schema: "public",
+          table: "Notification",
           filter: `userId=eq.${userId}`,
         },
-        (payload) => {
+        async (payload) => {
           const newNotif = payload.new as Notification;
           setNotifications((prev) => [newNotif, ...prev]);
           setUnreadCount((prev) => prev + 1);
-          
-          // Toast Notification
+
+          // Toast de notification in-app
           toast(newNotif.title, {
             description: newNotif.message,
-            icon: newNotif.type === 'SUCCESS' ? '✅' : newNotif.type === 'ERROR' ? '❌' : 'ℹ️',
+            icon: newNotif.type === "SUCCESS" ? "✅" : newNotif.type === "ERROR" ? "❌" : "ℹ️",
           });
+
+          // Son de notification (Web Audio API — ne nécessite pas de permission)
+          try {
+            const { playNotificationSound } = await import("@/lib/notification-sounds");
+            await playNotificationSound();
+          } catch {
+            // Silencieux si le son échoue (ex: politique navigateur)
+          }
         }
       )
       .subscribe();
 
+    // 4. Nettoyage à la destruction du composant
     return () => {
+      // Désabonner le canal Supabase
       supabase.removeChannel(channel);
+      // Désabonner le listener FCM foreground pour éviter les memory leaks
+      if (fcmUnsubscribeRef.current) {
+        fcmUnsubscribeRef.current();
+        fcmUnsubscribeRef.current = null;
+      }
     };
   }, [userId]);
 

@@ -67,10 +67,38 @@ export async function testPushNotification(token: string) {
       return { success: false, error: "Firebase Admin n'est pas initialisé sur le serveur." };
     }
 
+    // Message de test complet avec configuration webpush
+    // IMPORTANT : sans le bloc "webpush", les navigateurs web n'affichent pas
+    // la notification même si FCM la reçoit correctement.
     const message = {
       notification: {
         title: "Test Réussi ! 🎉",
         body: "Votre appareil est correctement configuré pour recevoir les notifications de REGIONALE EXPRESS VOYAGES SARL."
+      },
+      // Configuration spécifique aux navigateurs Web / PWA
+      webpush: {
+        notification: {
+          title: "Test Réussi ! 🎉",
+          body: "Votre appareil est correctement configuré pour recevoir les notifications de REGIONALE EXPRESS VOYAGES SARL.",
+          icon: "/icons/icon-192x192.png",
+          badge: "/icons/icon-72x72.png",
+          vibrate: [200, 100, 200, 100, 200],
+          requireInteraction: false, // Le test se ferme tout seul après 5 sec
+          tag: "rex-test-notification",
+          renotify: true,
+        },
+        fcmOptions: {
+          link: "/dashboard/settings/notifications"
+        },
+        // Headers pour forcer la priorité haute (contournement du mode batterie)
+        headers: {
+          Urgency: "high",
+          TTL: "86400",
+        }
+      },
+      data: {
+        url: "/dashboard/settings/notifications",
+        eventType: "TEST_NOTIFICATION"
       },
       token: token
     };

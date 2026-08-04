@@ -4,6 +4,7 @@ import { PrismaClient, Role as PrismaRoleEnum } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth';
+import { sendPushNotification } from '@/lib/firebase/fcm';
 
 const prisma = new PrismaClient();
 
@@ -41,6 +42,14 @@ export async function createUser(data: any) {
         isActive: true,
       }
     });
+
+    await sendPushNotification({
+      title: "Nouvel utilisateur créé",
+      body: `${prenom} ${nom} a été ajouté en tant que ${role} par le PDG.`,
+      eventType: "USER_CREATED",
+      url: "/dashboard/settings/users"
+    }, ["PDG"]);
+
 
     revalidatePath('/dashboard/settings/users');
     return { success: true };

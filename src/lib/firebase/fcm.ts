@@ -17,7 +17,7 @@ export async function sendPushNotification(
   targetAgencyId?: string
 ) {
   try {
-    // Si FCM n'est pas initialisé (pas de clés), on quitte silencieusement. 
+    // Si FCM n'est pas initialisé (pas de clés), on quitte silencieusement.
     // Le mode "dégradé" (notifications internes) fonctionnera toujours.
     if (!adminMessaging) {
       console.warn("FCM non configuré, notification push ignorée.");
@@ -36,9 +36,6 @@ export async function sendPushNotification(
     if (targetUserId) {
       whereClause.OR.push({ id: targetUserId });
     }
-    
-    // Si on a un targetAgencyId, on limite les rôles (hors PDG/DG) à cette agence
-    // Mais pour garder simple, on va récupérer tous ceux qui matchent et filtrer.
 
     if (whereClause.OR.length === 0) return { success: false, reason: "NO_TARGETS" };
 
@@ -57,9 +54,9 @@ export async function sendPushNotification(
     for (const user of targetUsers) {
       // Cloisonnement : si l'utilisateur est AGENT, il ne reçoit pas si c'est pour une autre agence
       if (
-        user.role !== "PDG" && 
-        user.role !== "DG" && 
-        targetAgencyId && 
+        user.role !== "PDG" &&
+        user.role !== "DG" &&
+        targetAgencyId &&
         user.agencyId !== targetAgencyId
       ) {
         // C'est un agent d'une autre agence, on ignore (Sécurité RLS)
@@ -78,10 +75,62 @@ export async function sendPushNotification(
       return { success: false, reason: "NO_ACTIVE_TOKENS" };
     }
 
+    // Construction du message FCM complet avec bloc webpush
+    // IMPORTANT : le bloc "webpush" est OBLIGATOIRE pour que les navigateurs
+    // web et PWA affichent réellement la notification. Sans ce bloc,
+    // FCM envoie le message mais le navigateur l'ignore silencieusement.
     const message = {
       notification: {
         title: payload.title,
         body: payload.body,
+      },
+      // Configuration pour navigateurs web / PWA (Chrome, Firefox, Edge, Samsung Internet)
+      webpush: {
+        notification: {
+          title: payload.title,
+          body: payload.body,
+          icon: "/icons/icon-192x192.png",
+          badge: "/icons/icon-72x72.png",
+          vibrate: [200, 100, 200, 100, 200],
+          requireInteraction: true,
+          tag: payload.eventType,
+          renotify: true,
+          // Timestamp pour que l'OS affiche l'heure correcte
+          timestamp: Date.now(),
+        },
+        fcmOptions: {
+          link: payload.url || "/dashboard"
+        },
+        // Headers pour haute priorité (contournement mode batterie Android)
+        headers: {
+          Urgency: "high",
+          TTL: "86400",
+        }
+      },
+      // Configuration pour applications Android natives (si applicable)
+      android: {
+        priority: "high" as const,
+        notification: {
+          icon: "ic_notification",
+          channelId: "rex-finance-channel",
+          priority: "high" as const,
+          defaultSound: true,
+          defaultVibrateTimings: true,
+        }
+      },
+      // Configuration pour iOS (APNs via FCM)
+      apns: {
+        headers: {
+          "apns-priority": "10",
+        },
+        payload: {
+          aps: {
+            sound: "default",
+            badge: 1,
+            contentAvailable: true,
+            mutableContent: true,
+          }
+        }
       },
       data: {
         url: payload.url || "/dashboard",
@@ -92,16 +141,17 @@ export async function sendPushNotification(
     };
 
     const response = await adminMessaging.sendEachForMulticast(message);
-    
+
     // Nettoyage des tokens invalides (désinstallés, expirés)
     if (response.failureCount > 0) {
       const failedTokens: string[] = [];
       response.responses.forEach((resp, idx) => {
         if (!resp.success) {
+          console.warn(`[FCM] Token invalide : ${resp.error?.message}`);
           failedTokens.push(tokensToNotify[idx]);
         }
       });
-      
+
       if (failedTokens.length > 0) {
         await prisma.deviceToken.deleteMany({
           where: { token: { in: failedTokens } }
@@ -109,23 +159,22 @@ export async function sendPushNotification(
       }
     }
 
-    // Journal d'audit : On enregistre que les Push ont été envoyés
+    // Journal d'audit
     try {
-       // Créer un log générique pour l'audit
-       await prisma.auditLog.create({
-         data: {
-           action: "PUSH_SENT",
-           role: "SYSTEM",
-           tableName: "DeviceToken",
-           recordId: payload.eventType,
-           newData: {
-             title: payload.title,
-             successCount: response.successCount,
-             failureCount: response.failureCount,
-             targets: userIdsNotified
-           }
-         }
-       });
+      await prisma.auditLog.create({
+        data: {
+          action: "PUSH_SENT",
+          role: "SYSTEM",
+          tableName: "DeviceToken",
+          recordId: payload.eventType,
+          newData: {
+            title: payload.title,
+            successCount: response.successCount,
+            failureCount: response.failureCount,
+            targets: userIdsNotified
+          }
+        }
+      });
     } catch(e) {
       console.error("Erreur lors de la sauvegarde de l'audit Push", e);
     }

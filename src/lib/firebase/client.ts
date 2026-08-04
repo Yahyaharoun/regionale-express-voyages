@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-import { getMessaging, getToken, Messaging } from "firebase/messaging";
+import { getMessaging, getToken, Messaging, onMessage, Unsubscribe } from "firebase/messaging";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -25,61 +25,108 @@ if (typeof window !== "undefined" && firebaseConfig.projectId) {
 
 export const getFirebaseMessaging = () => messaging;
 
-import { onMessage } from "firebase/messaging";
+/**
+ * Envoie la config Firebase au Service Worker afin d'éliminer
+ * toute race condition lors du démarrage du SW.
+ * À appeler UNE SEULE FOIS après l'enregistrement du SW.
+ */
+export async function sendConfigToServiceWorker(): Promise<void> {
+  try {
+    if (!("serviceWorker" in navigator)) return;
+    const registration = await navigator.serviceWorker.ready;
+    if (registration.active) {
+      registration.active.postMessage({
+        type: "FIREBASE_CONFIG",
+        config: firebaseConfig,
+      });
+    }
+  } catch (err) {
+    console.warn("[FCM] Impossible d'envoyer la config au SW :", err);
+  }
+}
 
-export const onForegroundMessage = () => {
+/**
+ * Abonnement aux messages foreground Firebase (application ouverte).
+ * Retourne une fonction d'unsubscription à appeler dans le cleanup
+ * de useEffect pour éviter les memory leaks.
+ *
+ * @returns Unsubscribe function or null if messaging is not available
+ */
+export const onForegroundMessage = (): Unsubscribe | null => {
   if (!messaging) return null;
-  return onMessage(messaging, async (payload) => {
-    console.log("Message au premier plan reçu : ", payload);
-    if (Notification.permission === "granted") {
-      const title = payload.notification?.title || "Notification REX";
-      const options = {
-        body: payload.notification?.body,
-        icon: "/icons/icon-192x192.png",
-        badge: "/icons/icon-72x72.png",
-        vibrate: [200, 100, 200, 100, 200], // Motif de vibration fort
-        data: payload.data,
-        silent: false, // Force la lecture du son système
-        requireInteraction: true // Reste à l'écran jusqu'à interaction
-      };
 
-      try {
-        if ('serviceWorker' in navigator) {
-          const registration = await navigator.serviceWorker.ready;
-          // Utilisation du SW garantit le meilleur support natif (PWA iOS, Android, Desktop)
-          await registration.showNotification(title, options);
-        } else {
-          new Notification(title, options);
-        }
-      } catch (e) {
+  const unsubscribe = onMessage(messaging, async (payload) => {
+    console.log("[FCM] Message foreground reçu : ", payload);
+
+    if (Notification.permission !== "granted") return;
+
+    const title = payload.notification?.title || "Notification REX";
+    // Cast en 'any' pour les propriétés étendues (vibrate, requireInteraction)
+    // qui sont supportées par Chrome/Edge mais pas dans le type standard
+    const options: any = {
+      body: payload.notification?.body,
+      icon: "/icons/icon-192x192.png",
+      badge: "/icons/icon-72x72.png",
+      vibrate: [200, 100, 200, 100, 200],
+      data: payload.data,
+      requireInteraction: true,
+    };
+
+    try {
+      if ("serviceWorker" in navigator) {
+        const registration = await navigator.serviceWorker.ready;
+        // Utilisation du SW garantit le meilleur support natif (PWA iOS, Android, Desktop)
+        await registration.showNotification(title, options);
+      } else {
         new Notification(title, options);
+      }
+    } catch (e) {
+      // Fallback direct si le SW n'est pas disponible
+      try {
+        new Notification(title, options);
+      } catch {
+        console.warn("[FCM] Impossible d'afficher la notification foreground.");
       }
     }
   });
+
+  return unsubscribe;
 };
 
+/**
+ * Obtient le token FCM pour cet appareil.
+ * Nécessite que la permission de notification soit accordée.
+ */
 export const requestFirebaseToken = async (): Promise<string | null> => {
   try {
     if (!messaging) return null;
-    
-    // Vous devez créer une paire de clés Web Push (VAPID key) dans les paramètres Firebase
-    // et l'ajouter à vos variables d'environnement
+
     const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
     if (!vapidKey) {
       console.warn("VAPID Key manquante pour les notifications Push.");
       return null;
     }
 
-    const currentToken = await getToken(messaging, { vapidKey });
-    
-    if (currentToken) {
-      return currentToken;
-    } else {
-      console.log("Aucun token disponible. Demander la permission d'abord.");
-      return null;
+    // S'assurer que le SW est bien enregistré avant de demander le token
+    if ("serviceWorker" in navigator) {
+      const registration = await navigator.serviceWorker.ready;
+      // Envoyer la config au SW pour s'assurer qu'il est correctement initialisé
+      await sendConfigToServiceWorker();
+
+      const currentToken = await getToken(messaging, { vapidKey, serviceWorkerRegistration: registration });
+
+      if (currentToken) {
+        return currentToken;
+      } else {
+        console.log("Aucun token FCM disponible. Permission peut-être manquante.");
+        return null;
+      }
     }
+
+    const currentToken = await getToken(messaging, { vapidKey });
+    return currentToken || null;
   } catch (err) {
-    console.error("Erreur lors de la récupération du token:", err);
+    console.error("Erreur lors de la récupération du token FCM:", err);
     return null;
   }
 };

@@ -115,12 +115,20 @@ export async function createExpenseAction(formData: FormData) {
       }
     }
 
-    // 3. Vérification du Net en Caisse (dépenses et paiements fournisseurs)
-    // En mode fournisseur (Option B), on déduit uniquement le montant versé initialement.
-    const montantADeduire = rawData.fournisseurId ? (rawData.montantVerse || 0) : montant;
-    const affordCheck = await canAffordOperation(montantADeduire, null);
-    if (!affordCheck.canAfford) {
-      return { error: affordCheck.message! };
+    // 3. Protection idempotence serveur — empêche les doubles soumissions
+    // Vérifie si une opération identique existe déjà dans les 15 dernières secondes
+    const fifteenSecondsAgo = new Date(Date.now() - 15000);
+    const existingDuplicate = await prisma.operation.findFirst({
+      where: {
+        agentId,
+        agencyId: targetAgencyId,
+        type: rawData.fournisseurId ? "PAIEMENT_FOURNISSEUR" : "DEPENSE",
+        montant: rawData.fournisseurId ? (rawData.montantVerse || 0) : montant,
+        createdAt: { gte: fifteenSecondsAgo }
+      }
+    });
+    if (existingDuplicate) {
+      return { error: "Opération en double détectée. L'enregistrement a déjà été soumis.", duplicate: true };
     }
 
     // 4. Exécution avec les IDs certifiés
@@ -171,13 +179,16 @@ export async function createExpenseAction(formData: FormData) {
       const notifyUsers = await prisma.user.findMany({
         where: { role: { in: ['DG', 'PDG'] }, isActive: true }
       });
+      // Récupérer le nom de l'agence pour enrichir la notification
+      const agencyForExpenseNotif = await prisma.agency.findUnique({ where: { id: targetAgencyId }, select: { nom: true } });
+      const agencyNameExpense = agencyForExpenseNotif?.nom || "";
       
       if (notifyUsers.length > 0) {
         await prisma.notification.createMany({
           data: notifyUsers.map(m => ({
             userId: m.id,
             title: "Nouvelle Dépense à valider",
-            message: `Dépense de ${montant.toLocaleString('fr-FR')} FCFA soumise par ${dbUser.prenom} ${dbUser.nom} — validation requise.`,
+            message: `Dépense de ${montant.toLocaleString('fr-FR')} FCFA soumise par ${dbUser.prenom} ${dbUser.nom}${agencyNameExpense ? ` — Agence ${agencyNameExpense}` : ''} — validation requise.`,
             type: "INFO",
             operationId: operation.id
           }))
@@ -185,7 +196,7 @@ export async function createExpenseAction(formData: FormData) {
 
         await sendPushNotification({
            title: "Nouvelle Dépense à valider",
-           body: `Dépense de ${montant.toLocaleString('fr-FR')} FCFA soumise par ${dbUser.prenom} ${dbUser.nom}`,
+           body: `Dépense de ${montant.toLocaleString('fr-FR')} FCFA par ${dbUser.prenom} ${dbUser.nom}${agencyNameExpense ? ` — Agence ${agencyNameExpense}` : ''}`,
            eventType: "EXPENSE_CREATED",
            url: "/dashboard/expenses"
         }, ["DG", "PDG"], undefined, targetAgencyId);
@@ -239,6 +250,7 @@ export async function createDepositAction(formData: FormData) {
       montant: parseInt(formData.get("montant") as string, 10),
       reference: formData.get("reference") as string,
       bankId: formData.get("bankId") as string,
+      commentaire: (formData.get("commentaire") as string) || undefined,
       agencyId: targetAgencyId,
       statut: formData.get("statut") as any || "BROUILLON",
     };
@@ -262,10 +274,20 @@ export async function createDepositAction(formData: FormData) {
       }
     }
 
-    // Vérification du Net en Caisse avant création du versement
-    const affordCheck = await canAffordOperation(montant, null);
-    if (!affordCheck.canAfford) {
-      return { error: affordCheck.message! };
+    // Protection idempotence serveur — empêche les doubles versements
+    const fifteenSecondsAgoDeposit = new Date(Date.now() - 15000);
+    const existingDepositDuplicate = await prisma.operation.findFirst({
+      where: {
+        agentId,
+        agencyId: targetAgencyId,
+        type: "VERSEMENT",
+        montant: rawData.montant,
+        bankId: rawData.bankId,
+        createdAt: { gte: fifteenSecondsAgoDeposit }
+      }
+    });
+    if (existingDepositDuplicate) {
+      return { error: "Versement en double détecté. L'enregistrement a déjà été soumis.", duplicate: true };
     }
 
     const operation = await OperationRepository.create({
@@ -273,6 +295,7 @@ export async function createDepositAction(formData: FormData) {
       statut: rawData.statut,
       montant,
       reference,
+      commentaire: rawData.commentaire,
       justificatifs: justificatifUrls,
       bank: { connect: { id: bankId } },
       agency: { connect: { id: targetAgencyId } },
@@ -284,13 +307,16 @@ export async function createDepositAction(formData: FormData) {
       const notifyUsers = await prisma.user.findMany({
         where: { role: { in: ['DG', 'PDG'] }, isActive: true }
       });
+      // Récupérer le nom de l'agence pour enrichir la notification
+      const agencyForNotif = await prisma.agency.findUnique({ where: { id: targetAgencyId }, select: { nom: true } });
+      const agencyName = agencyForNotif?.nom || "";
       
       if (notifyUsers.length > 0) {
         await prisma.notification.createMany({
           data: notifyUsers.map(m => ({
             userId: m.id,
             title: "Nouveau Versement bancaire à valider",
-            message: `Versement bancaire de ${montant.toLocaleString('fr-FR')} FCFA soumis par ${dbUser.prenom} ${dbUser.nom} — validation requise.`,
+            message: `Versement bancaire de ${montant.toLocaleString('fr-FR')} FCFA soumis par ${dbUser.prenom} ${dbUser.nom}${agencyName ? ` — Agence ${agencyName}` : ''} — validation requise.`,
             type: "INFO",
             operationId: operation.id
           }))
@@ -298,7 +324,7 @@ export async function createDepositAction(formData: FormData) {
 
         await sendPushNotification({
            title: "Nouveau Versement bancaire à valider",
-           body: `Versement bancaire de ${montant.toLocaleString('fr-FR')} FCFA soumis par ${dbUser.prenom} ${dbUser.nom}`,
+           body: `Versement de ${montant.toLocaleString('fr-FR')} FCFA par ${dbUser.prenom} ${dbUser.nom}${agencyName ? ` — Agence ${agencyName}` : ''}`,
            eventType: "DEPOSIT_CREATED",
            url: "/dashboard/deposits"
         }, ["DG", "PDG"], undefined, targetAgencyId);
@@ -464,7 +490,19 @@ export async function deleteOperationAction(id: string) {
       return { error: "Permission refusée. Les agents de saisie ne peuvent pas supprimer une opération." };
     }
 
+    const opToNotify = await prisma.operation.findUnique({ where: { id }, select: { montant: true, type: true, reference: true, commentaire: true, agencyId: true } });
+
     await OperationRepository.delete(id, dbUser.id, dbUser.role);
+
+    if (opToNotify) {
+      const typeLabel = opToNotify.type === 'VERSEMENT' ? 'Versement' : (opToNotify.type === 'RECETTE' ? 'Recette' : 'Dépense');
+      await sendPushNotification({
+         title: `${typeLabel} supprimé(e)`,
+         body: `${typeLabel} de ${opToNotify.montant.toLocaleString('fr-FR')} FCFA supprimé(e) par ${dbUser.prenom} ${dbUser.nom}`,
+         eventType: "OPERATION_DELETED",
+         url: "/dashboard"
+      }, ["DG", "PDG"], undefined, opToNotify.agencyId);
+    }
     
     revalidatePath("/dashboard/expenses");
     revalidatePath("/dashboard/deposits");
@@ -490,7 +528,19 @@ export async function cancelOperationAction(id: string) {
       return { error: "Permission refusée. Les agents de saisie ne peuvent pas annuler une opération." };
     }
 
+    const opToNotify = await prisma.operation.findUnique({ where: { id }, select: { montant: true, type: true, reference: true, commentaire: true, agencyId: true } });
+
     await OperationRepository.cancel(id, dbUser.id, dbUser.role);
+
+    if (opToNotify) {
+      const typeLabel = opToNotify.type === 'VERSEMENT' ? 'Versement' : (opToNotify.type === 'RECETTE' ? 'Recette' : 'Dépense');
+      await sendPushNotification({
+         title: `${typeLabel} annulé(e)`,
+         body: `${typeLabel} de ${opToNotify.montant.toLocaleString('fr-FR')} FCFA annulé(e) par ${dbUser.prenom} ${dbUser.nom}`,
+         eventType: "OPERATION_CANCELLED",
+         url: "/dashboard"
+      }, ["DG", "PDG"], undefined, opToNotify.agencyId);
+    }
     
     revalidatePath("/dashboard/expenses");
     revalidatePath("/dashboard/deposits");
@@ -671,6 +721,21 @@ export async function createRecetteAction(formData: FormData) {
       } catch (err: any) {
         return { error: err.message };
       }
+    }
+
+    // Protection idempotence serveur — empêche les doubles recettes
+    const fifteenSecondsAgoRecette = new Date(Date.now() - 15000);
+    const existingRecetteDuplicate = await prisma.operation.findFirst({
+      where: {
+        agentId,
+        agencyId: targetAgencyId,
+        type: "RECETTE",
+        montant,
+        createdAt: { gte: fifteenSecondsAgoRecette }
+      }
+    });
+    if (existingRecetteDuplicate) {
+      return { error: "Recette en double détectée. L'enregistrement a déjà été soumis.", duplicate: true };
     }
 
     const operation = await OperationRepository.create({

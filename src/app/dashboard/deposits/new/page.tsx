@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { DepositForm } from "@/features/deposits/DepositForm";
 import { getBanks } from "@/actions/bankActions";
-import { getAgencies } from "@/actions/agencyActions";
 
 export const metadata = {
   title: "Nouveau Versement bancaire | REGIONALE EXPRESS VOYAGES SARL",
@@ -14,9 +13,6 @@ export const metadata = {
 export default async function NewDepositPage() {
   const result = await getBanks();
   const banks = result?.data || [];
-
-  const aResult = await getAgencies();
-  const agencies = aResult?.data || [];
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 pb-20 md:pb-0">
@@ -38,7 +34,7 @@ export default async function NewDepositPage() {
           <CardDescription>Tous les champs avec une astérisque (*) sont obligatoires.</CardDescription>
         </CardHeader>
         <CardContent>
-          <DepositForm banks={banks} agencies={agencies} />
+          <DepositForm banks={banks} />
         </CardContent>
       </Card>
     </div>

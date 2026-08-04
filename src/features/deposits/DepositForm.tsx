@@ -1,59 +1,77 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { CameraCapture } from "@/components/CameraCapture";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { createDepositAction } from "@/actions/operationActions";
-import { Loader2, UploadCloud, Camera, Image as ImageIcon, FileCheck2 } from "lucide-react";
+import { Loader2, FileCheck2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Bank } from "@prisma/client";
+import { ImageUploadPicker } from "@/components/ImageUploadPicker";
 
 interface DepositFormProps {
   banks: Bank[];
-  agencies?: any[];
 }
 
-export function DepositForm({ banks, agencies = [] }: DepositFormProps) {
+export function DepositForm({ banks }: DepositFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [selectedBankId, setSelectedBankId] = useState<string>("");
-  const [selectedAgencyId, setSelectedAgencyId] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
 
   const selectedBank = banks.find(b => b.id === selectedBankId);
 
+  // Ref booléen pour protection anti-doublons côté client
+  // useRef est préféré à useState pour éviter les re-renders
   const isSubmitting = useRef(false);
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  const handleSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    // Protection : ignorer si déjà en cours de soumission
     if (isSubmitting.current) return;
-    
+
     isSubmitting.current = true;
     setIsLoading(true);
     setError(null);
 
-    const formData = new FormData(e.currentTarget);
-    formData.append("statut", "EN_ATTENTE");
+    try {
+      const formData = new FormData(e.currentTarget);
+      formData.append("statut", "EN_ATTENTE");
 
-    const result = await createDepositAction(formData);
+      const result = await createDepositAction(formData);
 
-    if (result?.error) {
-      setError(result.error);
-      toast.error(result.error);
+      if (result?.error) {
+        // Si c'est un doublon détecté côté serveur, message spécifique
+        if ((result as any).duplicate) {
+          toast.warning("Ce versement a déjà été enregistré. Vérifiez la liste des versements.");
+        } else {
+          setError(result.error);
+          toast.error(result.error);
+        }
+      } else {
+        toast.success("Versement soumis avec succès !");
+        router.push("/dashboard/deposits");
+        return; // Ne pas reset isSubmitting car on quitte la page
+      }
+    } catch (err: any) {
+      const msg = err?.message || "Une erreur inattendue s'est produite.";
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      // Réactiver le bouton seulement en cas d'erreur (succès = navigation)
       setIsLoading(false);
       isSubmitting.current = false;
-    } else {
-      toast.success("Versement soumis avec succès !");
-      router.push("/dashboard/deposits");
     }
-  }
+  }, [router]);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -62,26 +80,8 @@ export function DepositForm({ banks, agencies = [] }: DepositFormProps) {
           {error}
         </div>
       )}
-      
-      <div className="space-y-2">
-        <Label htmlFor="montant">Montant (FCFA) *</Label>
-        <div className="relative">
-          <Input 
-            id="montant" 
-            name="montant" 
-            type="number" 
-            inputMode="decimal"
-            pattern="[0-9]*"
-            placeholder="ex: 500000" 
-            required 
-            className="pl-4 h-12 text-lg font-semibold bg-muted/30"
-          />
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
-            FCFA
-          </div>
-        </div>
-      </div>
 
+      {/* Banque */}
       <div className="space-y-2">
         <Label htmlFor="bankId">Banque de dépôt *</Label>
         <input type="hidden" name="bankId" value={selectedBankId} />
@@ -103,89 +103,54 @@ export function DepositForm({ banks, agencies = [] }: DepositFormProps) {
         </Select>
       </div>
 
-      {agencies && agencies.length > 0 && (
-        <div className="space-y-2">
-          <Label htmlFor="agencyId" className="after:content-['*'] after:ml-0.5 after:text-red-500">Agence concernée</Label>
-          <Select required name="agencyId" value={selectedAgencyId || undefined} onValueChange={(val) => setSelectedAgencyId(val as string)}>
-            <SelectTrigger className="h-11 bg-muted/30">
-              {selectedAgencyId ? (
-                <span className="truncate">{agencies?.find(a => a.id === selectedAgencyId)?.nom}</span>
-              ) : (
-                <SelectValue placeholder="Sélectionner une agence" />
-              )}
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectLabel>Ligne 1 (Mbalmayo + Yaoundé Mvan)</SelectLabel>
-                {agencies.filter(a => a.nom.toLowerCase().includes("mbalmayo") || a.nom.toLowerCase().includes("mvan")).map((agency) => (
-                  <SelectItem key={agency.id} value={agency.id}>
-                    {agency.nom}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-              <SelectGroup>
-                <SelectLabel>Ligne 2 (Yaoundé Mimboman + Ayos + Akonolinga)</SelectLabel>
-                {agencies.filter(a => a.nom.toLowerCase().includes("mimboman") || a.nom.toLowerCase().includes("ayos") || a.nom.toLowerCase().includes("akonolinga")).map((agency) => (
-                  <SelectItem key={agency.id} value={agency.id}>
-                    {agency.nom}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-              <SelectGroup>
-                <SelectLabel>Autres</SelectLabel>
-                {agencies.filter(a => !a.nom.toLowerCase().includes("mbalmayo") && !a.nom.toLowerCase().includes("mvan") && !a.nom.toLowerCase().includes("mimboman") && !a.nom.toLowerCase().includes("ayos") && !a.nom.toLowerCase().includes("akonolinga")).map((agency) => (
-                  <SelectItem key={agency.id} value={agency.id}>
-                    {agency.nom}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+      {/* Montant */}
+      <div className="space-y-2">
+        <Label htmlFor="montant">Montant à verser (FCFA) *</Label>
+        <div className="relative">
+          <Input
+            id="montant"
+            name="montant"
+            type="number"
+            inputMode="decimal"
+            pattern="[0-9]*"
+            placeholder="ex: 500000"
+            required
+            min={1}
+            className="pl-4 h-12 text-lg font-semibold bg-muted/30"
+          />
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
+            FCFA
+          </div>
         </div>
-      )}
+      </div>
 
+      {/* Référence du bordereau */}
       <div className="space-y-2">
         <Label htmlFor="reference">Référence du bordereau *</Label>
-        <Input 
-          id="reference" 
-          name="reference" 
-          placeholder="ex: BORD-2026-001" 
-          required 
+        <Input
+          id="reference"
+          name="reference"
+          placeholder="ex: BORD-2026-001"
+          required
           className="h-11 bg-muted/30"
         />
       </div>
 
+      {/* Justificatif (photo uniquement) */}
       <div className="space-y-2">
         <Label>Justificatif de versement</Label>
-        
-        <div className="grid grid-cols-2 gap-3 mb-2">
-          <Button
-            type="button"
-            variant="outline"
-            className="h-14 border-primary/20 hover:bg-primary/5 flex flex-col items-center justify-center gap-1"
-            onClick={() => setIsCameraOpen(true)}
-          >
-            <Camera className="w-5 h-5 text-primary" />
-            <span className="text-xs">Prendre photo</span>
-          </Button>
-          
-          <Button
-            type="button"
-            variant="outline"
-            className="h-14 border-primary/20 hover:bg-primary/5 flex flex-col items-center justify-center gap-1"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <ImageIcon className="w-5 h-5 text-primary" />
-            <span className="text-xs">Galerie / Fichier</span>
-          </Button>
-        </div>
 
-        <input 
-          type="file" 
-          name="justificatif" 
+        <ImageUploadPicker
+          onSelectCamera={() => setIsCameraOpen(true)}
+          onSelectGallery={() => fileInputRef.current?.click()}
+        />
+
+        <input
+          type="file"
+          name="justificatif"
           ref={fileInputRef}
           className="hidden"
-          accept="image/png, image/jpeg, application/pdf"
+          accept="image/png, image/jpeg, image/webp, image/heic"
           onChange={(e) => {
             if (e.target.files && e.target.files[0]) {
               setFileName(e.target.files[0].name);
@@ -194,7 +159,7 @@ export function DepositForm({ banks, agencies = [] }: DepositFormProps) {
             }
           }}
         />
-        
+
         {fileName && (
           <div className="flex items-center gap-2 p-3 bg-emerald-500/10 text-emerald-600 rounded-lg border border-emerald-500/20 text-sm font-medium">
             <FileCheck2 className="w-5 h-5 shrink-0" />
@@ -203,13 +168,13 @@ export function DepositForm({ banks, agencies = [] }: DepositFormProps) {
         )}
       </div>
 
-      <CameraCapture 
-        isOpen={isCameraOpen} 
-        onClose={() => setIsCameraOpen(false)} 
+      <CameraCapture
+        isOpen={isCameraOpen}
+        onClose={() => setIsCameraOpen(false)}
         title="Scanner le bordereau"
         onFallback={() => fileInputRef.current?.click()}
         onCapture={(file) => {
-          // Create a DataTransfer object to simulate file input selection
+          // Simuler la sélection du fichier via DataTransfer
           const dataTransfer = new DataTransfer();
           dataTransfer.items.add(file);
           if (fileInputRef.current) {
@@ -219,16 +184,30 @@ export function DepositForm({ banks, agencies = [] }: DepositFormProps) {
         }}
       />
 
+      {/* Commentaire (optionnel) */}
+      <div className="space-y-2">
+        <Label htmlFor="commentaire">Commentaire <span className="text-muted-foreground text-xs">(optionnel)</span></Label>
+        <Textarea
+          id="commentaire"
+          name="commentaire"
+          placeholder="Informations complémentaires sur ce versement..."
+          className="bg-muted/30 resize-none"
+          rows={3}
+        />
+      </div>
+
+      {/* Actions */}
       <div className="pt-4 flex flex-col sm:flex-row gap-3 border-t border-border/40">
-        <Button 
-          type="submit" 
-          disabled={isLoading} 
+        <Button
+          type="submit"
+          disabled={isLoading}
           className="h-11 w-full shadow-md shadow-primary/20"
+          aria-label="Enregistrer le versement bancaire"
         >
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Enregistrement...
+              Enregistrement en cours...
             </>
           ) : (
             "Enregistrer"
