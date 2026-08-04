@@ -46,14 +46,27 @@ export function OperationListClient({ operations, role, editUrlPrefix }: Operati
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center px-4 py-2">
-        <Checkbox 
-          checked={selectedIds.length === operations.length && operations.length > 0} 
-          onCheckedChange={handleSelectAll} 
-          aria-label="Tout sélectionner"
-          className="mr-3 border-muted-foreground/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-        />
-        <span className="text-sm text-muted-foreground font-medium">Tout sélectionner</span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-4 py-2 bg-card rounded-xl border border-border/50">
+        <div className="flex items-center">
+          <Checkbox 
+            checked={selectedIds.length === operations.length && operations.length > 0} 
+            onCheckedChange={handleSelectAll} 
+            aria-label="Tout sélectionner"
+            className="mr-3 border-muted-foreground/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+          />
+          <span className={`text-sm font-bold transition-colors ${selectedIds.length > 0 ? 'text-primary' : 'text-muted-foreground'}`}>
+            {selectedIds.length > 0 ? 'Sélection en cours...' : 'Tout sélectionner'}
+          </span>
+        </div>
+        
+        {selectedIds.length > 0 && (
+          <BulkActionBar 
+            selectedIds={selectedIds} 
+            onClearSelection={() => setSelectedIds([])} 
+            userRole={role} 
+            editUrlPrefix={editUrlPrefix}
+          />
+        )}
       </div>
 
       {operations.map((op: any) => (
@@ -132,11 +145,6 @@ export function OperationListClient({ operations, role, editUrlPrefix }: Operati
         </Card>
       ))}
 
-      <BulkActionBar 
-        selectedIds={selectedIds} 
-        onClearSelection={() => setSelectedIds([])} 
-        userRole={role} 
-      />
     </div>
   );
 }

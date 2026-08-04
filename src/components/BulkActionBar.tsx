@@ -2,21 +2,24 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, Trash2, X, FileEdit } from "lucide-react";
+import { CheckCircle2, XCircle, Trash2, X, Undo2, Edit2 } from "lucide-react";
 import { useConfirm } from "@/hooks/useConfirm";
 import { bulkValidateOperationsAction, bulkDeleteOperationsAction, bulkCancelOperationsAction } from "@/actions/bulkActions";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface BulkActionBarProps {
   selectedIds: string[];
   onClearSelection: () => void;
   userRole: string;
+  editUrlPrefix: string;
 }
 
-export function BulkActionBar({ selectedIds, onClearSelection, userRole }: BulkActionBarProps) {
+export function BulkActionBar({ selectedIds, onClearSelection, userRole, editUrlPrefix }: BulkActionBarProps) {
   const { confirm } = useConfirm();
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const canValidate = userRole === "PDG" || userRole === "DG" || userRole === "DGA";
   const canDelete = userRole === "PDG" || userRole === "DG"; // Only PDG/DG can delete validated ops, but anyone but agents can delete pending. We rely on backend check.
@@ -75,46 +78,59 @@ export function BulkActionBar({ selectedIds, onClearSelection, userRole }: BulkA
     `Êtes-vous sûr de vouloir annuler les ${selectedIds.length} opérations sélectionnées ?`
   );
 
+  const handleEdit = () => {
+    if (selectedIds.length === 1) {
+      router.push(`${editUrlPrefix}/${selectedIds[0]}/edit`);
+    }
+  };
+
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 p-3 bg-card shadow-2xl border border-border/50 rounded-2xl animate-in slide-in-from-bottom-5">
-      <div className="flex items-center gap-2 px-3 border-r">
+    <div className="flex flex-wrap items-center gap-2 sm:gap-3 py-2 animate-in fade-in">
+      <div className="flex items-center gap-2 pr-2 border-r border-border/40">
         <span className="bg-primary text-primary-foreground text-xs font-bold px-2 py-1 rounded-full">
           {selectedIds.length}
         </span>
-        <span className="text-sm font-semibold hidden sm:inline">sélectionné(s)</span>
+        <span className="text-sm font-medium text-muted-foreground hidden sm:inline">sélectionné(s)</span>
       </div>
 
-      <div className="flex items-center gap-2 px-2">
+      <div className="flex flex-wrap items-center gap-2">
         {canValidate && (
           <>
-            <Button size="sm" variant="outline" className="border-emerald-500/30 text-emerald-600 hover:bg-emerald-50" onClick={handleValidate} disabled={isLoading}>
-              {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
-              Valider
+            <Button size="sm" variant="outline" className="border-emerald-500/30 text-emerald-600 hover:bg-emerald-50 bg-emerald-50/50" onClick={handleValidate} disabled={isLoading}>
+              {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-1 sm:mr-2" />}
+              <span className="text-xs sm:text-sm">Valider</span>
             </Button>
-            <Button size="sm" variant="outline" className="border-destructive/30 text-destructive hover:bg-destructive/10" onClick={handleReject} disabled={isLoading}>
-              {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <XCircle className="w-4 h-4 mr-2" />}
-              Rejeter
+            <Button size="sm" variant="outline" className="border-destructive/30 text-destructive hover:bg-destructive/10 bg-destructive/5" onClick={handleReject} disabled={isLoading}>
+              {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <XCircle className="w-4 h-4 mr-1 sm:mr-2" />}
+              <span className="text-xs sm:text-sm">Rejeter</span>
             </Button>
           </>
         )}
         
+        {selectedIds.length === 1 && (
+          <Button size="sm" variant="outline" className="border-blue-500/30 text-blue-600 hover:bg-blue-50 bg-blue-50/50" onClick={handleEdit} disabled={isLoading}>
+            <Edit2 className="w-4 h-4 mr-1 sm:mr-2" />
+            <span className="text-xs sm:text-sm">Modifier</span>
+          </Button>
+        )}
+
         {userRole !== 'AGENT' && userRole !== 'CAISSIER' && (
-          <Button size="sm" variant="ghost" onClick={handleCancel} disabled={isLoading}>
-            <FileEdit className="w-4 h-4 mr-2" />
-            <span className="hidden sm:inline">Annuler</span>
+          <Button size="sm" variant="outline" className="border-orange-500/30 text-orange-600 hover:bg-orange-50 bg-orange-50/50" onClick={handleCancel} disabled={isLoading} title="Annuler (Extourner) ces opérations">
+            <Undo2 className="w-4 h-4 mr-1 sm:mr-2" />
+            <span className="text-xs sm:text-sm">Annuler</span>
           </Button>
         )}
 
         {canDelete && (
-          <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleDelete} disabled={isLoading}>
-            <Trash2 className="w-4 h-4 sm:mr-2" />
-            <span className="hidden sm:inline">Supprimer</span>
+          <Button size="sm" variant="outline" className="border-destructive/30 text-destructive hover:text-destructive hover:bg-destructive/10 bg-destructive/5" onClick={handleDelete} disabled={isLoading}>
+            <Trash2 className="w-4 h-4 mr-1 sm:mr-2" />
+            <span className="text-xs sm:text-sm">Supprimer</span>
           </Button>
         )}
       </div>
 
-      <div className="pl-2 border-l">
-        <Button size="icon" variant="ghost" onClick={onClearSelection} disabled={isLoading}>
+      <div className="pl-1 sm:pl-2">
+        <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground" onClick={onClearSelection} disabled={isLoading} title="Effacer la sélection">
           <X className="w-4 h-4" />
         </Button>
       </div>
