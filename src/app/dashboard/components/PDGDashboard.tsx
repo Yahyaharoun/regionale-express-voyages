@@ -417,7 +417,7 @@ export function PDGDashboard({ stats, chartData, period = "MONTH", bankId = "ALL
                 </defs>
                 <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="hsl(var(--border))" strokeOpacity={0.5} />
                 <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} dy={10} interval="preserveStartEnd" minTickGap={10} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} tickFormatter={formatYAxis} width={75} allowDecimals={false} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} tickFormatter={formatYAxis} width={75} allowDecimals={false} domain={[500000, 40000000]} />
                 <RechartsTooltip content={<PremiumTooltip />} />
                 <Area type="monotone" dataKey="revenues" name="Versements" stroke={REX_GREEN} strokeWidth={3} fillOpacity={1} fill="url(#areaRevOnly)" activeDot={{ r: 6, fill: REX_GREEN, strokeWidth: 0 }} />
               </AreaChart>
@@ -445,7 +445,7 @@ export function PDGDashboard({ stats, chartData, period = "MONTH", bankId = "ALL
                 </defs>
                 <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="hsl(var(--border))" strokeOpacity={0.5} />
                 <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} dy={10} interval="preserveStartEnd" minTickGap={10} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} tickFormatter={formatYAxis} width={75} allowDecimals={false} domain={[0, (dataMax: number) => dataMax === 0 ? 100 : Math.ceil(dataMax * 1.1)]} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} tickFormatter={formatYAxis} width={75} allowDecimals={false} domain={[1000000, 40000000]} />
                 <RechartsTooltip content={<PremiumTooltip />} />
                 <Area type="monotone" dataKey="depenses" name="Dépenses" stroke={REX_DARK} strokeWidth={3} fillOpacity={1} fill="url(#areaExpOnly)" activeDot={{ r: 6, fill: REX_DARK, strokeWidth: 0 }} />
               </AreaChart>
@@ -473,7 +473,7 @@ export function PDGDashboard({ stats, chartData, period = "MONTH", bankId = "ALL
                 </defs>
                 <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="hsl(var(--border))" strokeOpacity={0.5} />
                 <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} dy={10} interval="preserveStartEnd" minTickGap={10} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} tickFormatter={formatYAxis} width={75} allowDecimals={false} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} tickFormatter={formatYAxis} width={75} allowDecimals={false} domain={[500000, 10000000]} />
                 <RechartsTooltip content={<PremiumTooltip />} />
                 <Area type="monotone" dataKey="recettes" name="Recettes" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#areaRecOnly)" activeDot={{ r: 6, fill: "#3b82f6", strokeWidth: 0 }} />
               </AreaChart>
@@ -511,7 +511,7 @@ export function PDGDashboard({ stats, chartData, period = "MONTH", bankId = "ALL
                       <td className="px-6 py-4 font-semibold text-foreground">{bank.nom}</td>
                       <td className="px-6 py-4 text-right font-medium">{bank.objectif > 0 ? formatToMillions(bank.objectif) : '-'}</td>
                       <td className="px-6 py-4 text-right text-emerald-600 font-medium">{bank.atteint > 0 ? formatToMillions(bank.atteint) : '-'}</td>
-                      <td className="px-6 py-4 text-right text-amber-600 font-medium">{bank.restant > 0 ? formatToMillions(bank.restant) : '-'}</td>
+                      <td className="px-6 py-4 text-right text-amber-600 font-medium">{bank.restant > 0 ? `${bank.restant.toLocaleString('fr-FR')} FCFA` : '-'}</td>
                       <td className="px-6 py-4">
                         <div className="flex flex-col items-center gap-1">
                           <span className="text-xs font-bold">{bank.pourcentage.toFixed(1)}%</span>
