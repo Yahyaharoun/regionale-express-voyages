@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowRightLeft, Clock, CheckCircle2, Plus } from "lucide-react";
 import { getOperations } from "@/actions/operationActions";
 import Link from "next/link";
+import { DateFilterDropdown } from "@/features/expenses/DateFilterDropdown";
 import { Button } from "@/components/ui/button";
 import { OperationActionsMenu } from "@/components/OperationActionsMenu";
 import { OperationDetailsModal } from "@/components/OperationDetailsModal";
@@ -10,8 +11,10 @@ import { cn } from "@/lib/utils";
 import { getCurrentUser } from "@/lib/auth";
 import { SyntheseJournaliere } from "@/features/recettes/SyntheseJournaliere";
 
-export default async function DepositsPage() {
-  const result = await getOperations(0, 50);
+export default async function DepositsPage(props: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
+  const searchParams = await props.searchParams;
+  const range = (searchParams?.range as string) || "jour";
+  const result = await getOperations(0, 50, range);
   const user = await getCurrentUser();
   const role = user?.role || "CAISSIER";
   const canValidate = role === "DG" || role === "PDG" || role === "DGA";
@@ -33,6 +36,10 @@ export default async function DepositsPage() {
             Nouvelle Recette journalière
           </Button>
         </Link>
+      </div>
+
+      <div className="flex justify-end">
+        <DateFilterDropdown />
       </div>
 
       <SyntheseJournaliere />
