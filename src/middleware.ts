@@ -4,6 +4,11 @@ import { jwtVerify } from 'jose';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
+// Global Rate Limit cache (In-memory Edge fallback)
+const rateLimitCache = new Map<string, { count: number; resetTime: number }>();
+const GLOBAL_RATE_LIMIT = 200; // 200 requests per minute
+const WINDOW_MS = 60 * 1000;
+
 export async function middleware(request: NextRequest) {
   const origin = request.headers.get('origin');
   
@@ -20,7 +25,7 @@ export async function middleware(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
   const cspHeader = `
     default-src 'self';
-    script-src 'self' 'unsafe-eval' 'unsafe-inline' https://storage.googleapis.com https://www.gstatic.com;
+    script-src 'self' 'unsafe-inline' https://storage.googleapis.com https://www.gstatic.com;
     style-src 'self' 'unsafe-inline';
     img-src 'self' blob: data: https://firebasestorage.googleapis.com;
     font-src 'self' data:;
@@ -28,7 +33,10 @@ export async function middleware(request: NextRequest) {
     base-uri 'self';
     form-action 'self';
     frame-ancestors 'none';
+    manifest-src 'self';
+    worker-src 'self';
     upgrade-insecure-requests;
+    block-all-mixed-content;
     connect-src 'self' https://firebasestorage.googleapis.com https://fcmregistrations.googleapis.com https://*.supabase.co wss://*.supabase.co;
   `.replace(/\s{2,}/g, ' ').trim();
   
@@ -73,6 +81,29 @@ export async function middleware(request: NextRequest) {
   response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
   response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
   response.headers.set('Cross-Origin-Resource-Policy', 'same-origin');
+  response.headers.set('Cross-Origin-Embedder-Policy', 'require-corp');
+  
+  // No Cache for API and Dashboard routes
+  if (pathname.startsWith('/api/') || pathname.startsWith('/dashboard')) {
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+  }
+
+  // Global API Rate Limiting
+  if (pathname.startsWith('/api/')) {
+    const ip = request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? '127.0.0.1';
+    const now = Date.now();
+    const record = rateLimitCache.get(ip);
+    if (!record || record.resetTime < now) {
+      rateLimitCache.set(ip, { count: 1, resetTime: now + WINDOW_MS });
+    } else {
+      if (record.count >= GLOBAL_RATE_LIMIT) {
+        return NextResponse.json({ error: 'Trop de requêtes globales (Rate Limit). Veuillez patienter.' }, { status: 429 });
+      }
+      record.count += 1;
+    }
+  }
   
   // Anti-CSRF on API routes (basic check)
   if (pathname.startsWith('/api/') && ['POST', 'PUT', 'DELETE'].includes(request.method)) {
