@@ -16,6 +16,7 @@ export default function NotificationsSettingsPage() {
   const { isSupported, permission, isLoading: hookLoading, requestPermission } = usePushNotifications();
   const [devices, setDevices] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [localToken, setLocalToken] = useState<string | null>(null);
   const [isTesting, setIsTesting] = useState(false);
   const [firebaseConfigured, setFirebaseConfigured] = useState<boolean | null>(null);
 
@@ -32,9 +33,20 @@ export default function NotificationsSettingsPage() {
   const loadDevices = async () => {
     setIsLoading(true);
     const res = await getUserDevices();
-    if (res.success) {
-      setDevices(res.data || []);
+    if (res.success && res.data) {
+      setDevices(res.data);
     }
+    
+    // Essayer de récupérer le token local pour savoir si cet appareil est enregistré
+    try {
+      if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+         const token = await requestFirebaseToken();
+         if (token) setLocalToken(token);
+      }
+    } catch(e) {
+      console.error(e);
+    }
+
     setIsLoading(false);
   };
 
@@ -83,8 +95,8 @@ export default function NotificationsSettingsPage() {
   };
 
   const hasCurrentDeviceRegistered = () => {
-    // Basic heuristic: check if any device in the list is the current one
-    return devices.length > 0;
+    if (!localToken) return false;
+    return devices.some(d => d.token === localToken);
   };
 
   return (

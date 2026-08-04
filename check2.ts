@@ -1,0 +1,1 @@
+import { PrismaClient } from '@prisma/client'; const prisma = new PrismaClient(); prisma.deviceToken.findMany({ include: { user: { select: { nom: true, role: true } } } }).then(console.log).finally(() => prisma.$disconnect());
