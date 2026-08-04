@@ -3,8 +3,6 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('justificatifs', 'justificatifs', false)
 ON CONFLICT (id) DO NOTHING;
 
--- Activer le RLS sur les objets du storage
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
 
 -- --------------------------------------------------------
 -- POLITIQUES STORAGE 'justificatifs'
