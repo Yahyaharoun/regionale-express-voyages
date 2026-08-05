@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { WifiOff } from "lucide-react";
 
 export function OfflineIndicator() {
   const [isOffline, setIsOffline] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     // Check initial state
     setIsOffline(!navigator.onLine);
 
@@ -38,12 +39,14 @@ export function OfflineIndicator() {
     };
   }, []);
 
-  if (!isOffline) return null;
+  if (!isClient) return null;
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-yellow-500 text-black px-4 py-2 rounded-full shadow-lg font-medium text-sm animate-in fade-in slide-in-from-bottom-5">
-      <WifiOff className="h-4 w-4" />
-      Mode Hors-Ligne (Vos actions sont sauvegardées)
+    <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/30 border border-border/40 text-[10px] font-medium transition-colors ml-1" title={isOffline ? "Connexion perdue" : "Connecté"}>
+      <div className={`w-2 h-2 rounded-full ${isOffline ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`} />
+      <span className={`hidden sm:inline-block ${isOffline ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+        {isOffline ? 'Hors-ligne' : 'En ligne'}
+      </span>
     </div>
   );
 }

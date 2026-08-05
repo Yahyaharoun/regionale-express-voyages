@@ -24,6 +24,7 @@ import { prisma } from "@/lib/prisma";
 import { LogoutButton } from "@/components/LogoutButton";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { RefreshButton } from "@/components/RefreshButton";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
 
 const CopilotWidget = dynamic(
   () => import("@/features/ai/CopilotWidget").then((mod) => mod.CopilotWidget)
@@ -59,6 +60,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <span className="tracking-tight">Dashboard</span>
         </div>
         <div className="flex items-center gap-1 sm:gap-2">
+          <OfflineIndicator />
           <RefreshButton />
           {userId && <NotificationBell userId={userId} />}
           <Sheet>
@@ -274,6 +276,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         {/* Desktop Topbar */}
         <header className="hidden md:flex h-16 items-center justify-end px-8 border-b border-border/40 glass sticky top-0 z-30">
           <div className="flex items-center gap-2">
+            <OfflineIndicator />
             <RefreshButton />
             {userId && <NotificationBell userId={userId} />}
           </div>

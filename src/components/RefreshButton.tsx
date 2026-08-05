@@ -13,6 +13,13 @@ export function RefreshButton() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefresh = async () => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      toast.error("Connexion internet requise pour actualiser", {
+        description: "Vous êtes actuellement en mode hors-ligne."
+      });
+      return;
+    }
+    
     setIsRefreshing(true);
     try {
       await revalidateOperationsTag();
