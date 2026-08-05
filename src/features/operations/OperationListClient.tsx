@@ -104,7 +104,16 @@ export function OperationListClient({ operations, role, editUrlPrefix }: Operati
                   {op.statut.replace('_', ' ')}
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground font-medium mt-1.5">{op.category?.nom || op.type} • {new Date(op.createdAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</p>
+              <div className="flex items-center gap-2 mt-1.5">
+                {op.type === 'RECETTE' && op.typeRecette && (
+                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${
+                    op.typeRecette === 'VIP' ? 'bg-amber-500/10 text-amber-600' : 'bg-blue-500/10 text-blue-600'
+                  }`}>
+                    {op.typeRecette}
+                  </span>
+                )}
+                <p className="text-xs text-muted-foreground font-medium">{op.category?.nom || op.type} • {new Date(op.createdAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</p>
+              </div>
             </div>
           </div>
           

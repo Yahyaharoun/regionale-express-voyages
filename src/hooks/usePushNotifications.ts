@@ -78,9 +78,10 @@ export function usePushNotifications() {
             } else if (perm === "denied") {
               toast.error("Notifications bloquées. Veuillez modifier les paramètres de votre navigateur.");
             }
-          } catch (e) {
-            console.error(e);
-            toast.error("Erreur lors de la demande de permission.");
+          } catch (e: any) {
+            console.error("Erreur de permission:", e);
+            const errMsg = e instanceof Error ? e.message : String(e);
+            toast.error(`Erreur d'autorisation : ${errMsg}. Sur iOS, vérifiez les réglages Safari > Avancé > Experimental Features.`);
           }
           resolve(false);
         },

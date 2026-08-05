@@ -160,21 +160,6 @@ export async function deleteAgencyAction(id: string) {
       return { error: "Permission refusée. Rôle PDG/DG/AGENT requis." };
     }
 
-    // Check relations first (Operations, Users)
-    const agency = await prisma.agency.findUnique({
-      where: { id },
-      include: {
-        _count: {
-          select: { users: true, operations: true }
-        }
-      }
-    });
-
-    if (!agency) return { error: "Agence introuvable." };
-    if (agency._count.users > 0 || agency._count.operations > 0) {
-      return { error: "Impossible de supprimer cette agence car elle contient des utilisateurs ou des opérations. Veuillez la suspendre à la place." };
-    }
-
     await AgencyRepository.delete(id, user.userId);
     revalidatePath("/dashboard/agencies");
     

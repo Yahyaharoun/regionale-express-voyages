@@ -681,6 +681,7 @@ export async function createRecetteAction(formData: FormData) {
       agencyId: targetAgencyId,
       statut: formData.get("statut") as any || "EN_ATTENTE",
       dateOperation: formData.get("dateOperation") as string || undefined,
+      typeRecette: formData.get("typeRecette") as string || "CLASSIQUE",
     };
     
     const validatedFields = recetteSchema.safeParse(rawData);
@@ -689,7 +690,7 @@ export async function createRecetteAction(formData: FormData) {
       return { error: validatedFields.error.errors[0].message };
     }
 
-    const { montant, commentaire } = validatedFields.data;
+    const { montant, commentaire, typeRecette } = validatedFields.data;
 
     let justificatifUrls: string[] = [];
     const file = formData.get("justificatif") as File | null;
@@ -724,6 +725,7 @@ export async function createRecetteAction(formData: FormData) {
       commentaire,
       dateOperation: rawData.dateOperation ? parseDateRobust(rawData.dateOperation) : new Date(),
       justificatifs: justificatifUrls,
+      typeRecette,
       agency: { connect: { id: targetAgencyId } },
       agent: { connect: { id: agentId } },
     }, agentId, dbUser.role, targetAgencyId);
@@ -798,6 +800,7 @@ export async function updateRecetteAction(id: string, formData: FormData) {
       commentaire: formData.get("commentaire") as string,
       agencyId: (formData.get("agencyId") as string) || existingOp.agencyId,
       dateOperation: formData.get("dateOperation") as string || undefined,
+      typeRecette: formData.get("typeRecette") as string || existingOp.typeRecette || "CLASSIQUE",
     };
     
     const validatedFields = recetteSchema.safeParse(rawData);
@@ -805,11 +808,12 @@ export async function updateRecetteAction(id: string, formData: FormData) {
       return { error: validatedFields.error.errors[0].message };
     }
 
-    const { montant, commentaire } = validatedFields.data;
+    const { montant, commentaire, typeRecette } = validatedFields.data;
 
     const updateData: any = {
       montant,
       commentaire,
+      typeRecette,
       agencyId: rawData.agencyId,
       statut: nextStatut,
     };

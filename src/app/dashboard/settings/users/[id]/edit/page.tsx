@@ -22,9 +22,13 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
   const { getCurrentUser } = await import('@/lib/auth');
   const session = await getCurrentUser();
   let currentUserRole = "AGENT";
+  let currentUserId = "";
   if (session) {
     const caller = await prisma.user.findUnique({ where: { id: session.userId } });
-    if (caller) currentUserRole = caller.role;
+    if (caller) {
+      currentUserRole = caller.role;
+      currentUserId = caller.id;
+    }
   }
 
   return (
@@ -36,7 +40,7 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
         </div>
       </div>
       
-      <UserEditForm user={user} agencies={agencies} currentUserRole={currentUserRole} />
+      <UserEditForm user={user} agencies={agencies} currentUserRole={currentUserRole} currentUserId={currentUserId} />
     </div>
   );
 }

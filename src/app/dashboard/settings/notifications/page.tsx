@@ -11,6 +11,7 @@ import { Bell, Smartphone, Trash2, ShieldCheck, ShieldAlert, CheckCircle2, XCirc
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { Wrench } from "lucide-react";
 
 export default function NotificationsSettingsPage() {
   const { isSupported, permission, isLoading: hookLoading, requestPermission } = usePushNotifications();
@@ -99,6 +100,23 @@ export default function NotificationsSettingsPage() {
     return devices.some(d => d.token === localToken);
   };
 
+  const handleRepair = async () => {
+    setIsTesting(true);
+    try {
+      if ("serviceWorker" in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const reg of registrations) {
+          await reg.unregister();
+        }
+      }
+      toast.success("Service Worker réinitialisé. Veuillez recharger la page.");
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (e: any) {
+      toast.error("Erreur de réparation : " + e.message);
+      setIsTesting(false);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-12">
       <div>
@@ -164,6 +182,11 @@ export default function NotificationsSettingsPage() {
                 </Button>
               </div>
             )}
+            
+            <Button variant="outline" onClick={handleRepair} disabled={isTesting} className="w-full sm:w-auto mt-2 border-amber-500 text-amber-600 hover:bg-amber-50">
+              <Wrench className="mr-2 h-4 w-4" />
+              Réparer les notifications (Réinitialiser SW)
+            </Button>
             
             {firebaseConfigured === false && (
               <p className="text-sm text-destructive font-medium mt-2">

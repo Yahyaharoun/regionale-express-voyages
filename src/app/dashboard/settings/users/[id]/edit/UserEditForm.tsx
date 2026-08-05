@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { User, Agency } from "@prisma/client";
 import { updateUserAction } from "../../actions";
 
-export function UserEditForm({ user, agencies, currentUserRole = "PDG" }: { user: User, agencies: Agency[], currentUserRole?: string }) {
+export function UserEditForm({ user, agencies, currentUserRole = "PDG", currentUserId = "" }: { user: User, agencies: Agency[], currentUserRole?: string, currentUserId?: string }) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -22,6 +22,8 @@ export function UserEditForm({ user, agencies, currentUserRole = "PDG" }: { user
   });
 
   const isPDG = currentUserRole === "PDG";
+  const isSelf = user.id === currentUserId;
+  const canEditInfo = isPDG || isSelf;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +53,7 @@ export function UserEditForm({ user, agencies, currentUserRole = "PDG" }: { user
                 required 
                 value={formData.nom} 
                 onChange={(e) => setFormData({ ...formData, nom: e.target.value.toUpperCase() })} 
-                disabled={!isPDG}
+                disabled={!canEditInfo}
               />
             </div>
             
@@ -61,7 +63,7 @@ export function UserEditForm({ user, agencies, currentUserRole = "PDG" }: { user
                 required 
                 value={formData.prenom} 
                 onChange={(e) => setFormData({ ...formData, prenom: e.target.value })} 
-                disabled={!isPDG}
+                disabled={!canEditInfo}
               />
             </div>
 
@@ -72,7 +74,7 @@ export function UserEditForm({ user, agencies, currentUserRole = "PDG" }: { user
                 type="email"
                 value={formData.email} 
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })} 
-                disabled={!isPDG}
+                disabled={!canEditInfo}
               />
             </div>
 
@@ -83,6 +85,7 @@ export function UserEditForm({ user, agencies, currentUserRole = "PDG" }: { user
                 value={formData.telephone} 
                 onChange={(e) => setFormData({ ...formData, telephone: e.target.value })} 
                 placeholder="Ex: +237 6XX XXX XXX"
+                disabled={!canEditInfo}
               />
             </div>
 

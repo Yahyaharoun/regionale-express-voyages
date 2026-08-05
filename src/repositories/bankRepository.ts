@@ -4,13 +4,14 @@ import { writeAuditLog } from "@/lib/auditService";
 export class BankRepository {
   static async findAll() {
     return prisma.bank.findMany({
+      where: { isDeleted: false },
       orderBy: { createdAt: 'desc' }
     });
   }
 
   static async findActive() {
     return prisma.bank.findMany({
-      where: { isActive: true },
+      where: { isActive: true, isDeleted: false },
       orderBy: { nom: 'asc' }
     });
   }
@@ -87,18 +88,19 @@ export class BankRepository {
     return prisma.$transaction(async (tx) => {
       // also delete objective
       await tx.bankObjective.deleteMany({ where: { bankId: id } });
-      const bank = await tx.bank.delete({
-        where: { id }
+      const bank = await tx.bank.update({
+        where: { id },
+        data: { isDeleted: true, isActive: false }
       });
       
       await writeAuditLog(tx, {
         userId: authorId,
         role: 'PDG',
-        action: "DELETE_BANK",
+        action: "ARCHIVE_BANK",
         tableName: "Bank",
         recordId: id,
         oldData: oldBank as any,
-        newData: null
+        newData: { isDeleted: true }
       });
       
       return bank;

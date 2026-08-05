@@ -13,5 +13,10 @@ export const recetteSchema = z.object({
   .optional()
   .nullable(),
   
-  agencyId: z.string().uuid("L'identifiant de l'agence doit être un UUID valide")
+  agencyId: z.string().uuid("L'identifiant de l'agence doit être un UUID valide"),
+  
+  typeRecette: z.enum(["CLASSIQUE", "VIP"], {
+    required_error: "Le type de recette est requis",
+    invalid_type_error: "Le type de recette doit être CLASSIQUE ou VIP",
+  }).default("CLASSIQUE"),
 });

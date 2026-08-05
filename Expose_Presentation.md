@@ -5,15 +5,15 @@
 ---
 
 ## 1. INTRODUCTION (Pour tout le monde - 1 minute)
-"Bonjour Monsieur le PDG, Monsieur le DG, et à toute l'équipe de saisie.
+"Bonjour Monsieur le PDG, Monsieur le Directeur Général.
 
-Je suis très fier de vous présenter aujourd'hui le nouvel outil de gestion de Régionale Express Voyages. 
-Nous avons construit bien plus qu'un simple logiciel : c'est une véritable **plateforme financière sur mesure**. L'objectif de ce projet était de résoudre trois grands défis de notre quotidien :
-1. Avoir un suivi financier en temps réel.
-2. Garantir que nos agences puissent travailler même lors des coupures d'Internet.
-3. Sécuriser nos données financières avec les meilleurs standards mondiaux.
+Avant de vous présenter cette application, permettez-moi de rappeler son principal objectif : faciliter la gestion de l’entreprise et vous aider à prendre des décisions grâce à des informations fiables et disponibles en temps réel.
 
-Je vais vous expliquer très brièvement comment cet outil va changer notre façon de travailler, selon votre rôle."
+Avec cette plateforme, toutes les opérations sont centralisées : les recettes journalières, les dépenses, les versements bancaires, les fournisseurs et les synthèses financières. Chaque action est tracée, les droits de chaque utilisateur sont contrôlés selon son rôle, et vous pouvez suivre l’évolution de chaque agence sans avoir à rechercher des informations dans plusieurs registres ou fichiers.
+
+Cette solution permet donc de gagner du temps, de réduire les erreurs, d’améliorer la transparence des opérations et de disposer d’une vision globale de la situation financière de l’entreprise à tout moment.
+
+Je vais maintenant vous présenter REGIONALE EXPRESS VOYAGES SARL ERP, son fonctionnement et les principales fonctionnalités développées pour répondre à vos besoins."
 
 ---
 

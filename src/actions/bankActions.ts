@@ -152,20 +152,6 @@ export async function deleteBankAction(id: string) {
       return { error: "Permission refusée. Rôle PDG/DG requis." };
     }
 
-    const bank = await prisma.bank.findUnique({
-      where: { id },
-      include: {
-        _count: {
-          select: { versements: true }
-        }
-      }
-    });
-
-    if (!bank) return { error: "Banque introuvable." };
-    if (bank._count.versements > 0) {
-      return { error: "Impossible de supprimer cette banque car elle contient des versements liés." };
-    }
-
     await BankRepository.delete(id, user.userId);
     revalidatePath("/dashboard/banks");
     

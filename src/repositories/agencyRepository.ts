@@ -10,6 +10,7 @@ export class AgencyRepository {
   static findAll = unstable_cache(
     async () => {
       return prisma.agency.findMany({
+        where: { isDeleted: false },
         orderBy: { nom: 'asc' },
         select: {
           id: true,
@@ -84,18 +85,19 @@ export class AgencyRepository {
     if (!oldAgency) throw new Error("Agence introuvable");
     
     return prisma.$transaction(async (tx) => {
-      const agency = await tx.agency.delete({
-        where: { id }
+      const agency = await tx.agency.update({
+        where: { id },
+        data: { isDeleted: true, isActive: false }
       });
       
       await writeAuditLog(tx, {
         userId: authorId,
         role: 'PDG',
-        action: "DELETE_AGENCY",
+        action: "ARCHIVE_AGENCY",
         tableName: "Agency",
         recordId: id,
         oldData: oldAgency as any,
-        newData: null
+        newData: { isDeleted: true }
       });
       
       return agency;

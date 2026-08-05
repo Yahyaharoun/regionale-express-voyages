@@ -80,6 +80,7 @@ model Agency {
   telephone   String?
   responsable String?
   isActive    Boolean @default(true)
+  isDeleted   Boolean @default(false)
 
   users      User[]
   operations Operation[]
@@ -95,6 +96,7 @@ model Bank {
   agenceBancaire String?
   devise         String  @default("XAF")
   isActive       Boolean @default(true)
+  isDeleted      Boolean @default(false)
 
   objectifs  BankObjective[]
   versements Operation[]     @relation("BankOperations")
@@ -123,6 +125,7 @@ model Category {
   nom         String
   description String?
   isActive    Boolean @default(true)
+  isDeleted   Boolean @default(false)
 
   depenses Operation[] @relation("CategoryOperations")
 
@@ -138,6 +141,7 @@ model Operation {
 
   categoryId  String?
   commentaire String?
+  typeRecette String  @default("CLASSIQUE") // CLASSIQUE, VIP
 
   // Nouveau système Fournisseur / Achats
   statutPaiement String? // PAYE, IMPAYE, AVANCE
@@ -191,6 +195,7 @@ model Fournisseur {
   ville           String?
   personneContact String?
   statut          String  @default("ACTIF") // ACTIF, INACTIF
+  isDeleted       Boolean @default(false)
   
   paiements       Operation[] @relation("FournisseurOperations")
 

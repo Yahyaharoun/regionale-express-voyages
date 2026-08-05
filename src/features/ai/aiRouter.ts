@@ -44,10 +44,14 @@ export async function processLocalAIQuery(
     if (msg.includes("erp") || msg.includes("logiciel") || msg.includes("fonctionnalité") || msg.includes("modules") || msg.includes("à propos")) {
       let erpReply = "💻 **REGIONALE EXPRESS VOYAGES SARL ERP (v1.0.0 Enterprise)**\n\n";
       erpReply += "Il s'agit de la plateforme de gestion centralisée développée exclusivement pour l'entreprise.\n\n";
-      erpReply += "**Modules principaux :**\n- Recettes journalières\n- Dépenses\n- Versements bancaires (avec objectifs)\n- Synthèse financière & Net en Caisse\n- Gestion des fournisseurs\n\n";
+      erpReply += "**Modules principaux :**\n- Recettes journalières (Classiques et VIP)\n- Dépenses\n- Versements bancaires (avec objectifs)\n- Synthèse financière & Net en Caisse\n- Gestion des fournisseurs\n\n";
       erpReply += "**Agences prises en charge :** Yaoundé Mvan, Yaoundé Mimboman, Mbalmayo, Ayos, Akonolinga.\n\n";
       erpReply += "L'application fonctionne en mode **Offline First**, ce qui permet de continuer à travailler même sans connexion internet, avec une synchronisation automatique au retour du réseau.";
       return { text: erpReply, functionsCalled };
+    }
+    
+    if (msg.includes("type de recette") || msg.includes("recette vip") || msg.includes("vip") || msg.includes("classique")) {
+      return { text: "🎫 **Types de Recettes :**\n\n- **Recette Classique :** Concerne les revenus standards des agences pour les voyages réguliers.\n- **Recette VIP :** Concerne les revenus issus des services Premium ou des bus VIP, offrant un suivi séparé pour l'analyse de rentabilité.", functionsCalled };
     }
     
     if (msg.includes("rôle") || msg.includes("roles") || msg.includes("permissions") || msg.includes("agent") || msg.includes("dg") || msg.includes("pdg")) {
@@ -580,7 +584,7 @@ async function generateComprehensiveBilan(dateRange: DateRange, user: SessionPay
 
   // Recettes journalières
   const recettes = await prisma.operation.groupBy({
-    by: ['statut'],
+    by: ['statut', 'typeRecette'],
     where: { type: 'RECETTE', createdAt: { gte: dateRange.startDate, lte: dateRange.endDate }, ...agencyFilter },
     _count: true,
     _sum: { montant: true }
@@ -588,8 +592,11 @@ async function generateComprehensiveBilan(dateRange: DateRange, user: SessionPay
 
   // Helper
   const extractStat = (data: any[], statut: string) => {
-    const item = data.find(d => d.statut === statut);
-    return { count: item?._count || 0, sum: item?._sum?.montant || 0 };
+    const items = data.filter(d => d.statut === statut);
+    return items.reduce((acc, curr) => ({
+      count: acc.count + curr._count,
+      sum: acc.sum + (curr._sum?.montant || 0)
+    }), { count: 0, sum: 0 });
   };
 
   const totalDepenses = depenses.reduce((acc, curr) => acc + (curr._sum.montant || 0), 0);
@@ -609,6 +616,10 @@ async function generateComprehensiveBilan(dateRange: DateRange, user: SessionPay
   const recettesRejetees = extractStat(recettes, 'REJETEE');
 
   const sumRecettes = recettesValidees.sum + recettesValideesDG.sum;
+  
+  // VIP vs Classique
+  const recettesVIP = recettes.filter(r => r.typeRecette === 'VIP').reduce((acc, curr) => acc + (curr._sum.montant || 0), 0);
+  const recettesClassiques = recettes.filter(r => r.typeRecette === 'CLASSIQUE' || !r.typeRecette).reduce((acc, curr) => acc + (curr._sum.montant || 0), 0);
 
   let report = `## Bilan complet\n\n`;
   report += `**Date concernée :** ${dateRange.label}\n\n`;
@@ -619,7 +630,8 @@ async function generateComprehensiveBilan(dateRange: DateRange, user: SessionPay
 
   report += `### Résumé général\n\n`;
   report += `- **Nombre total de recettes :** ${countRecettes} (dont ${recettesValidees.count + recettesValideesDG.count} validées, ${recettesRejetees.count} rejetées)\n`;
-  report += `- **Montant des recettes (Validées) :** ${sumRecettes.toLocaleString('fr-FR')} FCFA\n\n`;
+  report += `- **Montant des recettes (Validées) :** ${sumRecettes.toLocaleString('fr-FR')} FCFA\n`;
+  report += `  - *Détail : ${recettesVIP.toLocaleString('fr-FR')} FCFA VIP | ${recettesClassiques.toLocaleString('fr-FR')} FCFA Classique*\n\n`;
 
   report += `- **Nombre total de dépenses :** ${countDepenses} (dont ${depensesValidees.count} validées, ${depensesRejetees.count} rejetées)\n`;
   report += `- **Montant des dépenses (Validées) :** ${depensesValidees.sum.toLocaleString('fr-FR')} FCFA\n\n`;

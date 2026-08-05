@@ -4,13 +4,14 @@ import { writeAuditLog } from "@/lib/auditService";
 export class CategoryRepository {
   static async findAll() {
     return prisma.category.findMany({
+      where: { isDeleted: false },
       orderBy: { nom: 'asc' }
     });
   }
 
   static async findActive() {
     return prisma.category.findMany({
-      where: { isActive: true },
+      where: { isActive: true, isDeleted: false },
       orderBy: { nom: 'asc' }
     });
   }
@@ -63,18 +64,19 @@ export class CategoryRepository {
     if (!oldCategory) throw new Error("Catégorie introuvable");
     
     return prisma.$transaction(async (tx) => {
-      const category = await tx.category.delete({
-        where: { id }
+      const category = await tx.category.update({
+        where: { id },
+        data: { isDeleted: true, isActive: false }
       });
       
       await writeAuditLog(tx, {
         userId: authorId,
         role: 'PDG',
-        action: "DELETE_CATEGORY",
+        action: "ARCHIVE_CATEGORY",
         tableName: "Category",
         recordId: id,
         oldData: oldCategory as any,
-        newData: null
+        newData: { isDeleted: true }
       });
       
       return category;

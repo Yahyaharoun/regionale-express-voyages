@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Agency } from "@prisma/client";
 import { Select, SelectContent, SelectGroup, SelectLabel, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SyncManager } from "@/lib/syncQueue";
 
 
 interface RecetteFormProps {
@@ -24,6 +25,7 @@ export function RecetteForm({ agencys = [] }: RecetteFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [selectedAgencyId, setSelectedAgencyId] = useState<string>("");
+  const [typeRecette, setTypeRecette] = useState<string>("CLASSIQUE");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
 
@@ -42,6 +44,26 @@ export function RecetteForm({ agencys = [] }: RecetteFormProps) {
 
     if (selectedAgencyId) {
       formData.append("agencyId", selectedAgencyId);
+    }
+    formData.append("typeRecette", typeRecette);
+
+    if (!navigator.onLine) {
+      const payload = {
+        id: crypto.randomUUID(),
+        type: "RECETTE",
+        statut: "EN_ATTENTE",
+        montant: Number(formData.get("montant")),
+        agencyId: formData.get("agencyId") || undefined,
+        typeRecette: formData.get("typeRecette") || "CLASSIQUE",
+        dateOperation: formData.get("dateOperation") || undefined,
+        commentaire: formData.get("commentaire") || undefined,
+      };
+
+      await SyncManager.enqueue('CREATE', 'Operation', payload);
+      
+      toast.success("Mode hors-ligne : La recette a été enregistrée localement et sera synchronisée dès le retour de la connexion.");
+      router.push("/dashboard/recettes");
+      return;
     }
 
     const result = await createRecetteAction(formData);
@@ -82,6 +104,19 @@ export function RecetteForm({ agencys = [] }: RecetteFormProps) {
             FCFA
           </div>
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="typeRecette" className="after:content-['*'] after:ml-0.5 after:text-red-500">Type de Recette</Label>
+        <Select required name="typeRecette" value={typeRecette} onValueChange={setTypeRecette}>
+          <SelectTrigger className="h-11 bg-muted/30">
+            <SelectValue placeholder="Sélectionner le type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="CLASSIQUE">Classique</SelectItem>
+            <SelectItem value="VIP">VIP</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-2">

@@ -99,9 +99,9 @@ export async function updateUserAction(userId: string, data: any) {
     let roleIdToUpdate = undefined;
     let roleToUpdate = undefined;
     let agencyIdToUpdate = undefined;
-    let nomToUpdate = isPDG ? nom : undefined;
-    let prenomToUpdate = isPDG ? prenom : undefined;
-    let emailToUpdate = isPDG ? email : undefined;
+    let nomToUpdate = (isPDG || isSelf) ? nom : undefined;
+    let prenomToUpdate = (isPDG || isSelf) ? prenom : undefined;
+    let emailToUpdate = (isPDG || isSelf) ? email : undefined;
 
     if (isPDG) {
       const appRole = await prisma.appRole.findUnique({ where: { name: role } });
@@ -122,7 +122,10 @@ export async function updateUserAction(userId: string, data: any) {
     await prisma.user.update({
       where: { id: userId },
       data: {
-        ...(isPDG && { nom: nomToUpdate, prenom: prenomToUpdate, email: emailToUpdate, role: roleToUpdate, roleId: roleIdToUpdate, agencyId: agencyIdToUpdate }),
+        ...(nomToUpdate && { nom: nomToUpdate }),
+        ...(prenomToUpdate && { prenom: prenomToUpdate }),
+        ...(emailToUpdate && { email: emailToUpdate }),
+        ...(isPDG && { role: roleToUpdate, roleId: roleIdToUpdate, agencyId: agencyIdToUpdate }),
         telephone: telephone || null,
       }
     });

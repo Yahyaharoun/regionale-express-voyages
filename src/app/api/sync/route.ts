@@ -16,7 +16,7 @@ export async function POST(req: Request) {
       if (item.action === 'CREATE') {
         // Enregistrer l'opération
         // payload contient les mêmes champs que le formData initial
-        const { type, montant, agencyId, categoryId, commentaire, reference, bankId } = item.payload;
+        const { type, montant, agencyId, categoryId, commentaire, reference, bankId, typeRecette, dateOperation } = item.payload;
 
         await prisma.operation.create({
           data: {
@@ -29,6 +29,8 @@ export async function POST(req: Request) {
             commentaire,
             reference,
             bankId,
+            typeRecette,
+            createdAt: dateOperation ? new Date(dateOperation) : undefined,
             agentId: user.userId,
           }
         });
