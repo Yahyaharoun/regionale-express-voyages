@@ -78,8 +78,6 @@ export const onForegroundMessage = (): Unsubscribe | null => {
     if (Notification.permission !== "granted") return;
 
     const title = payload.notification?.title || "Notification REX";
-    // Cast en 'any' pour les propriétés étendues (vibrate, requireInteraction)
-    // qui sont supportées par Chrome/Edge mais pas dans le type standard
     const options: any = {
       body: payload.notification?.body,
       icon: "/icons/icon-192x192.png",
@@ -87,18 +85,23 @@ export const onForegroundMessage = (): Unsubscribe | null => {
       vibrate: [200, 100, 200, 100, 200],
       data: payload.data,
       requireInteraction: true,
+      silent: false
     };
+
+    // explicit sound fallback in foreground for standard browsers
+    try {
+      const audio = new Audio("data:audio/mp3;base64,//NExAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq");
+      audio.play().catch(e => console.log('Audio play blocked or failed', e));
+    } catch(e) {}
 
     try {
       const registration = await getOrRegisterServiceWorker();
       if (registration) {
-        // Utilisation du SW garantit le meilleur support natif (PWA iOS, Android, Desktop)
         await registration.showNotification(title, options);
       } else {
         new Notification(title, options);
       }
     } catch (e) {
-      // Fallback direct si le SW n'est pas disponible
       try {
         new Notification(title, options);
       } catch {
@@ -110,35 +113,26 @@ export const onForegroundMessage = (): Unsubscribe | null => {
   return unsubscribe;
 };
 
-/**
- * Obtient le token FCM pour cet appareil.
- * Nécessite que la permission de notification soit accordée.
- */
 export const requestFirebaseToken = async (): Promise<string | null> => {
   try {
     if (!messaging) return null;
 
-    const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
+    // Fallback à la clé hardcodée si l'environnement Vercel ne la transmet pas
+    const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY || "BPda14TBnRrSD2rGo5bGVDJUCb4sPsyAJZ9DvyLJbBJRb7PZ68OwhpDbj2o8vcKIAqeWM0Odnj2OzVKnQQn1XHI";
+    
     if (!vapidKey) {
       console.warn("VAPID Key manquante pour les notifications Push.");
       return null;
     }
 
-    // S'assurer que le SW est bien enregistré avant de demander le token
     const registration = await getOrRegisterServiceWorker();
     
     if (registration) {
-      // Envoyer la config au SW pour s'assurer qu'il est correctement initialisé
       await sendConfigToServiceWorker();
-
       const currentToken = await getToken(messaging, { vapidKey, serviceWorkerRegistration: registration });
-
-      if (currentToken) {
-        return currentToken;
-      } else {
-        console.log("Aucun token FCM disponible. Permission peut-être manquante.");
-        return null;
-      }
+      if (currentToken) return currentToken;
+      console.log("Aucun token FCM disponible.");
+      return null;
     }
 
     const currentToken = await getToken(messaging, { vapidKey });

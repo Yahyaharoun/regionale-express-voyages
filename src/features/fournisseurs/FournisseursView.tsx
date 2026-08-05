@@ -5,17 +5,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Search, Edit, Power, CreditCard } from "lucide-react";
-import { createFournisseurAction, updateFournisseurAction, toggleFournisseurStatusAction } from "@/actions/fournisseurActions";
+import { Plus, Search, Edit, Power, CreditCard, Trash2 } from "lucide-react";
+import { createFournisseurAction, updateFournisseurAction, toggleFournisseurStatusAction, deleteFournisseurAction } from "@/actions/fournisseurActions";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
+import { useConfirm } from "@/hooks/useConfirm";
 
 export function FournisseursView({ initialFournisseurs, userRole }: { initialFournisseurs: any[], userRole?: string }) {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editItem, setEditItem] = useState<any>(null);
+  const { confirm } = useConfirm();
 
   const canEdit = userRole === 'PDG' || userRole === 'DG';
 
@@ -46,6 +48,25 @@ export function FournisseursView({ initialFournisseurs, userRole }: { initialFou
     const res = await toggleFournisseurStatusAction(f.id, f.statut);
     if (res?.error) toast.error(res.error);
     else toast.success("Statut modifié");
+  };
+
+  const handleDelete = (f: any) => {
+    if (!canEdit) return;
+    confirm({
+      title: "Supprimer le fournisseur",
+      description: `Voulez-vous vraiment supprimer le fournisseur "${f.nom}" ? Cette action est irréversible. S'il est lié à des opérations, la suppression sera bloquée.`,
+      confirmText: "Oui, supprimer",
+      cancelText: "Annuler",
+      variant: "destructive",
+      onConfirm: async () => {
+        const res = await deleteFournisseurAction(f.id);
+        if (res?.error) {
+          toast.error(res.error);
+        } else {
+          toast.success("Fournisseur supprimé avec succès.");
+        }
+      }
+    });
   };
 
   return (
@@ -132,11 +153,14 @@ export function FournisseursView({ initialFournisseurs, userRole }: { initialFou
                   </Button>
                   {canEdit && (
                     <>
-                      <Button variant="ghost" size="icon" onClick={() => { setEditItem(f); setIsAddOpen(true); }}>
-                        <Edit className="h-4 w-4" />
+                      <Button variant="ghost" size="icon" onClick={() => { setEditItem(f); setIsAddOpen(true); }} title="Modifier">
+                        <Edit className="h-4 w-4 text-blue-600" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => toggleStatus(f)}>
-                        <Power className={`h-4 w-4 ${f.statut === 'ACTIF' ? 'text-destructive' : 'text-emerald-600'}`} />
+                      <Button variant="ghost" size="icon" onClick={() => toggleStatus(f)} title={f.statut === 'ACTIF' ? 'Désactiver' : 'Activer'}>
+                        <Power className={`h-4 w-4 ${f.statut === 'ACTIF' ? 'text-amber-500' : 'text-emerald-600'}`} />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(f)} title="Supprimer définitivement">
+                        <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </>
                   )}

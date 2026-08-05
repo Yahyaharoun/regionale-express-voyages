@@ -152,3 +152,49 @@ export async function toggleFournisseurStatusAction(id: string, currentStatus: s
     return { error: "Erreur lors de la modification du statut." };
   }
 }
+
+export async function deleteFournisseurAction(id: string) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return { error: "Non autorisé." };
+
+    const dbUser = await prisma.user.findUnique({ where: { id: user.userId } });
+    if (!dbUser || !['PDG', 'DG'].includes(dbUser.role)) {
+      return { error: "Permission refusée. Seul le PDG ou le DG peut supprimer un fournisseur." };
+    }
+
+    if (!await actionRateLimit.check(user.userId)) {
+      return { error: "Trop de requêtes. Veuillez patienter." };
+    }
+
+    // Check if fournisseur has associated operations
+    const operationsCount = await prisma.operation.count({
+      where: { fournisseurId: id }
+    });
+
+    if (operationsCount > 0) {
+      return { error: `Impossible de supprimer ce fournisseur car il est lié à ${operationsCount} opération(s). Veuillez le désactiver à la place.` };
+    }
+
+    const fournisseur = await prisma.fournisseur.delete({
+      where: { id }
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        userId: user.userId,
+        role: user.role,
+        action: 'DELETE',
+        tableName: 'Fournisseur',
+        recordId: fournisseur.id,
+        oldData: JSON.parse(JSON.stringify(fournisseur)),
+      }
+    });
+
+    revalidatePath("/dashboard/fournisseurs");
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting fournisseur:", error);
+    return { error: "Une erreur s'est produite lors de la suppression du fournisseur." };
+  }
+}

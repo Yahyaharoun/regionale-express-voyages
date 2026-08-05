@@ -8,79 +8,70 @@ export class OperationRepository {
    * Fetches operations with pagination and agency scope
    */
   static findAll = async (agencyId: string, skip: number = 0, take: number = 50, range?: string) => {
-    const getCachedOperations = unstable_cache(
-      async () => {
-        let dateFilter = {};
-        if (range && range !== 'all') {
-          // Utilisation du fuseau horaire UTC+1 (Cameroun/Afrique Centrale)
-          const offset = 1; 
-          const nowUtc = new Date();
-          const localNow = new Date(nowUtc.getTime() + (offset * 3600000));
-          
-          const year = localNow.getUTCFullYear();
-          const month = localNow.getUTCMonth();
-          const date = localNow.getUTCDate();
-          
-          let start: Date | null = null;
-          let end: Date | null = null;
-          
-          if (range === 'jour' || range === 'today') {
-            start = new Date(Date.UTC(year, month, date, -offset, 0, 0, 0));
-            end = new Date(Date.UTC(year, month, date, 23 - offset, 59, 59, 999));
-          } else if (range === 'semaine') {
-            const day = localNow.getUTCDay() || 7; // 1-7
-            start = new Date(Date.UTC(year, month, date - day + 1, -offset, 0, 0, 0));
-            end = new Date(Date.UTC(year, month, date + (7 - day), 23 - offset, 59, 59, 999));
-          } else if (range === 'mois') {
-            start = new Date(Date.UTC(year, month, 1, -offset, 0, 0, 0));
-            end = new Date(Date.UTC(year, month + 1, 0, 23 - offset, 59, 59, 999));
-          } else if (range === 'annee') {
-            start = new Date(Date.UTC(year, 0, 1, -offset, 0, 0, 0));
-            end = new Date(Date.UTC(year, 11, 31, 23 - offset, 59, 59, 999));
-          }
-          
-          if (start && end) {
-            dateFilter = { dateOperation: { gte: start, lte: end } };
-          }
-        }
+    let dateFilter = {};
+    if (range && range !== 'all') {
+      const offset = 1; 
+      const nowUtc = new Date();
+      const localNow = new Date(nowUtc.getTime() + (offset * 3600000));
+      
+      const year = localNow.getUTCFullYear();
+      const month = localNow.getUTCMonth();
+      const date = localNow.getUTCDate();
+      
+      let start: Date | null = null;
+      let end: Date | null = null;
+      
+      if (range === 'jour' || range === 'today') {
+        start = new Date(Date.UTC(year, month, date, -offset, 0, 0, 0));
+        end = new Date(Date.UTC(year, month, date, 23 - offset, 59, 59, 999));
+      } else if (range === 'semaine') {
+        const day = localNow.getUTCDay() || 7;
+        start = new Date(Date.UTC(year, month, date - day + 1, -offset, 0, 0, 0));
+        end = new Date(Date.UTC(year, month, date + (7 - day), 23 - offset, 59, 59, 999));
+      } else if (range === 'mois') {
+        start = new Date(Date.UTC(year, month, 1, -offset, 0, 0, 0));
+        end = new Date(Date.UTC(year, month + 1, 0, 23 - offset, 59, 59, 999));
+      } else if (range === 'annee') {
+        start = new Date(Date.UTC(year, 0, 1, -offset, 0, 0, 0));
+        end = new Date(Date.UTC(year, 11, 31, 23 - offset, 59, 59, 999));
+      }
+      
+      if (start && end) {
+        dateFilter = { dateOperation: { gte: start, lte: end } };
+      }
+    }
 
-        const whereClause: any = { ...dateFilter };
-        if (agencyId && agencyId !== 'ALL') {
-          whereClause.agencyId = agencyId;
-        }
+    const whereClause: any = { ...dateFilter };
+    if (agencyId && agencyId !== 'ALL') {
+      whereClause.agencyId = agencyId;
+    }
 
-        const results = await prisma.operation.findMany({
-          where: whereClause,
-          skip,
-          take,
-          orderBy: { dateOperation: 'desc' },
-          include: {
-            category: { select: { id: true, nom: true } },
-            agency: { select: { id: true, nom: true } },
-            agent: { select: { id: true, nom: true, prenom: true } },
-            fournisseur: { select: { id: true, nom: true } },
-            lignes: true,
-            bank: true
-          }
-        });
+    const results = await prisma.operation.findMany({
+      where: whereClause,
+      skip,
+      take,
+      orderBy: { dateOperation: 'desc' },
+      include: {
+        category: { select: { id: true, nom: true } },
+        agency: { select: { id: true, nom: true } },
+        agent: { select: { id: true, nom: true, prenom: true } },
+        fournisseur: { select: { id: true, nom: true } },
+        lignes: true,
+        bank: true
+      }
+    });
 
-        // Tri personnalisé : éléments non validés en premier
-        results.sort((a, b) => {
-          const aPending = ['EN_ATTENTE', 'BROUILLON', 'A_VALIDER'].includes(a.statut);
-          const bPending = ['EN_ATTENTE', 'BROUILLON', 'A_VALIDER'].includes(b.statut);
-          if (aPending && !bPending) return -1;
-          if (!aPending && bPending) return 1;
-          const timeA = new Date(a.dateOperation || a.createdAt).getTime();
-          const timeB = new Date(b.dateOperation || b.createdAt).getTime();
-          return timeB - timeA;
-        });
+    results.sort((a, b) => {
+      const aPending = ['EN_ATTENTE', 'BROUILLON', 'A_VALIDER'].includes(a.statut);
+      const bPending = ['EN_ATTENTE', 'BROUILLON', 'A_VALIDER'].includes(b.statut);
+      if (aPending && !bPending) return -1;
+      if (!aPending && bPending) return 1;
+      const timeA = new Date(a.dateOperation || a.createdAt).getTime();
+      const timeB = new Date(b.dateOperation || b.createdAt).getTime();
+      return timeB - timeA;
+    });
 
-        return results;
-      },
-      [`operations-${agencyId}-${skip}-${take}-${range || 'all'}`],
-      { tags: ['operations', `operations-${agencyId}`], revalidate: 60 }
-    );
-    return getCachedOperations();
+    return results;
   };
 
   /**

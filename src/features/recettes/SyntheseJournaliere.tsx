@@ -59,9 +59,15 @@ export async function SyntheseJournaliere() {
         <div className="space-y-3">
           <h3 className="font-bold text-slate-700 border-b pb-1">LIGNE 1</h3>
           {ligne1Stats.map(({ agency, stats }) => (
-            <div key={agency.id} className="flex justify-between text-sm">
-              <span className="text-slate-600">{agency.nom}</span>
-              <span className="font-medium text-emerald-600">{stats.recettesBrutes.toLocaleString('fr-FR')} F</span>
+            <div key={agency.id} className="text-sm pb-2 border-b border-slate-100 last:border-0">
+              <div className="flex justify-between font-semibold">
+                <span className="text-slate-700">{agency.nom}</span>
+                <span className="text-emerald-700">{stats.recettesBrutes.toLocaleString('fr-FR')} F</span>
+              </div>
+              <div className="flex justify-between text-xs text-slate-500 mt-1 pl-2">
+                <span>Classique: {stats.recettesClassique.toLocaleString('fr-FR')} F</span>
+                <span>VIP: {stats.recettesVIP.toLocaleString('fr-FR')} F</span>
+              </div>
             </div>
           ))}
           <div className="pt-2 border-t mt-2">
@@ -84,9 +90,15 @@ export async function SyntheseJournaliere() {
         <div className="space-y-3 md:border-l md:pl-6">
           <h3 className="font-bold text-slate-700 border-b pb-1">LIGNE 2</h3>
           {ligne2Stats.map(({ agency, stats }) => (
-            <div key={agency.id} className="flex justify-between text-sm">
-              <span className="text-slate-600">{agency.nom}</span>
-              <span className="font-medium text-emerald-600">{stats.recettesBrutes.toLocaleString('fr-FR')} F</span>
+            <div key={agency.id} className="text-sm pb-2 border-b border-slate-100 last:border-0">
+              <div className="flex justify-between font-semibold">
+                <span className="text-slate-700">{agency.nom}</span>
+                <span className="text-emerald-700">{stats.recettesBrutes.toLocaleString('fr-FR')} F</span>
+              </div>
+              <div className="flex justify-between text-xs text-slate-500 mt-1 pl-2">
+                <span>Classique: {stats.recettesClassique.toLocaleString('fr-FR')} F</span>
+                <span>VIP: {stats.recettesVIP.toLocaleString('fr-FR')} F</span>
+              </div>
             </div>
           ))}
           <div className="pt-2 border-t mt-2">

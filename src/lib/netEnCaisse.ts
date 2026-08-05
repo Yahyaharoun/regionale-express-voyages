@@ -16,6 +16,8 @@ export async function getNetEnCaisse(
   dateRange?: { startDate?: Date; endDate?: Date }
 ): Promise<{
   recettesBrutes: number;
+  recettesVIP: number;
+  recettesClassique: number;
   totalDepenses: number;
   totalVersements: number;
   netEnCaisse: number;
@@ -34,9 +36,17 @@ export async function getNetEnCaisse(
     if (dateRange.endDate) baseWhere.dateOperation.lte = dateRange.endDate;
   }
 
-  const [recettesAgg, depensesSimplesAgg, depensesFournisseurAgg, versementsAgg] = await Promise.all([
+  const [recettesAgg, recettesVIPAgg, recettesClassiqueAgg, depensesSimplesAgg, depensesFournisseurAgg, versementsAgg] = await Promise.all([
     prisma.operation.aggregate({
       where: { ...baseWhere, type: "RECETTE" },
+      _sum: { montant: true },
+    }),
+    prisma.operation.aggregate({
+      where: { ...baseWhere, type: "RECETTE", typeRecette: "VIP" },
+      _sum: { montant: true },
+    }),
+    prisma.operation.aggregate({
+      where: { ...baseWhere, type: "RECETTE", typeRecette: "CLASSIQUE" },
       _sum: { montant: true },
     }),
     prisma.operation.aggregate({
@@ -53,7 +63,7 @@ export async function getNetEnCaisse(
         type: { in: ["DEPENSE", "PAIEMENT_FOURNISSEUR"] },
         fournisseurId: { not: null },
       },
-      _sum: { montantVerse: true }, // Option B: on déduit le montant réel versé
+      _sum: { montantVerse: true },
     }),
     prisma.operation.aggregate({
       where: { ...baseWhere, type: "VERSEMENT" },
@@ -62,12 +72,16 @@ export async function getNetEnCaisse(
   ]);
 
   const recettesBrutes = recettesAgg._sum.montant ?? 0;
+  const recettesVIP = recettesVIPAgg._sum.montant ?? 0;
+  const recettesClassique = recettesClassiqueAgg._sum.montant ?? 0;
   const totalDepenses = (depensesSimplesAgg._sum.montant ?? 0) + (depensesFournisseurAgg._sum.montantVerse ?? 0);
   const totalVersements = versementsAgg._sum.montant ?? 0;
   const netEnCaisse = recettesBrutes - totalDepenses - totalVersements;
 
   return {
     recettesBrutes,
+    recettesVIP,
+    recettesClassique,
     totalDepenses,
     totalVersements,
     netEnCaisse,
