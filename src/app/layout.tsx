@@ -3,6 +3,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ConfirmProvider } from "@/hooks/useConfirm";
 import { QueryProvider } from "@/providers/QueryProvider";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
 import "./globals.css";
 
 const inter = Inter({
@@ -77,6 +78,7 @@ export default function RootLayout({
           >
             <ConfirmProvider>
               {children}
+              <OfflineIndicator />
               <Toaster position="top-right" />
             </ConfirmProvider>
           </ThemeProvider>
