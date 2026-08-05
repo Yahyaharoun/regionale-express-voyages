@@ -28,7 +28,11 @@ const serwist = new Serwist({
   },
   runtimeCaching: [
     {
-      matcher: ({ url }) => url.pathname.startsWith('/api/auth') || url.host.includes('supabase.co'),
+      matcher: ({ url }) => {
+        // Exclure les images publiques Supabase pour autoriser leur mise en cache
+        const isSupabaseImage = url.host.includes('supabase.co') && url.pathname.includes('/storage/v1/object/public/');
+        return url.pathname.startsWith('/api/auth') || (url.host.includes('supabase.co') && !isSupabaseImage);
+      },
       handler: new NetworkOnly(),
     },
     ...defaultCache,

@@ -13,12 +13,28 @@ export function OfflineIndicator() {
     const handleOffline = () => setIsOffline(true);
     const handleOnline = () => setIsOffline(false);
 
+    const handleGlobalClick = (e: MouseEvent) => {
+      if (navigator.onLine) return;
+      
+      const target = e.target as HTMLElement;
+      const anchor = target.closest('a');
+      if (anchor && anchor.href && anchor.href.startsWith(window.location.origin)) {
+        // C'est un lien interne, on force la navigation classique (hard navigation)
+        // Cela permet au Service Worker de capturer la requête et d'afficher la page hors-ligne ou le cache
+        e.preventDefault();
+        e.stopPropagation();
+        window.location.href = anchor.href;
+      }
+    };
+
     window.addEventListener("offline", handleOffline);
     window.addEventListener("online", handleOnline);
+    window.addEventListener("click", handleGlobalClick, { capture: true });
 
     return () => {
       window.removeEventListener("offline", handleOffline);
       window.removeEventListener("online", handleOnline);
+      window.removeEventListener("click", handleGlobalClick, { capture: true });
     };
   }, []);
 
