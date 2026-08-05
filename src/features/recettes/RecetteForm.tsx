@@ -108,7 +108,7 @@ export function RecetteForm({ agencys = [] }: RecetteFormProps) {
 
       <div className="space-y-2">
         <Label htmlFor="typeRecette" className="after:content-['*'] after:ml-0.5 after:text-red-500">Type de Recette</Label>
-        <Select required name="typeRecette" value={typeRecette} onValueChange={setTypeRecette}>
+        <Select required name="typeRecette" value={typeRecette} onValueChange={(val) => setTypeRecette(val as string)}>
           <SelectTrigger className="h-11 bg-muted/30">
             <SelectValue placeholder="Sélectionner le type" />
           </SelectTrigger>
