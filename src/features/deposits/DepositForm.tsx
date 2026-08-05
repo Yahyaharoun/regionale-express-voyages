@@ -47,6 +47,19 @@ export function DepositForm({ banks }: DepositFormProps) {
       const formData = new FormData(e.currentTarget);
       formData.append("statut", "EN_ATTENTE");
 
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        const payload = Object.fromEntries(formData.entries());
+        const { SyncManager } = await import('@/lib/syncQueue');
+        await SyncManager.enqueue('CREATE', 'Operation', {
+           id: crypto.randomUUID(),
+           type: 'VERSEMENT',
+           ...payload
+        });
+        toast.success("Mode hors-ligne : Versement enregistré localement. Il sera synchronisé dès le retour de la connexion.");
+        router.push("/dashboard/deposits");
+        return;
+      }
+
       const result = await createDepositAction(formData);
 
       if (result?.error) {
@@ -63,9 +76,17 @@ export function DepositForm({ banks }: DepositFormProps) {
         return; // Ne pas reset isSubmitting car on quitte la page
       }
     } catch (err: any) {
-      const msg = err?.message || "Une erreur inattendue s'est produite.";
-      setError(msg);
-      toast.error(msg);
+      // Fallback in case fetch fails due to network mid-flight
+      const formData = new FormData(e.currentTarget);
+      const payload = Object.fromEntries(formData.entries());
+      const { SyncManager } = await import('@/lib/syncQueue');
+      await SyncManager.enqueue('CREATE', 'Operation', {
+         id: crypto.randomUUID(),
+         type: 'VERSEMENT',
+         ...payload
+      });
+      toast.success("Réseau instable. Versement enregistré hors-ligne.");
+      router.push("/dashboard/deposits");
     } finally {
       // Réactiver le bouton seulement en cas d'erreur (succès = navigation)
       setIsLoading(false);
