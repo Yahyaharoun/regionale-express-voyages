@@ -147,12 +147,11 @@ export function DepositForm({ banks }: DepositFormProps) {
 
       {/* Référence du bordereau */}
       <div className="space-y-2">
-        <Label htmlFor="reference">Référence du bordereau *</Label>
+        <Label htmlFor="reference">Référence du bordereau <span className="text-muted-foreground text-xs">(optionnel)</span></Label>
         <Input
           id="reference"
           name="reference"
           placeholder="ex: BORD-2026-001"
-          required
           className="h-11 bg-muted/30"
         />
       </div>

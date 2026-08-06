@@ -17,28 +17,66 @@ export async function SyntheseJournaliere() {
   const ligne1Agencies = agencies.filter(a => a.nom.toLowerCase().includes("mbalmayo") || a.nom.toLowerCase().includes("mvan"));
   const ligne2Agencies = agencies.filter(a => a.nom.toLowerCase().includes("mimboman") || a.nom.toLowerCase().includes("ayos") || a.nom.toLowerCase().includes("akonolinga"));
 
+  const normalizeName = (name: string) => {
+    const n = name.toLowerCase();
+    if (n.includes('mbalmayo')) return 'Mbalmayo';
+    if (n.includes('mvan')) return 'Yaoundé-Mvan';
+    if (n.includes('mimboman')) return 'Yaoundé-Mimboman';
+    if (n.includes('ayos')) return 'Ayos';
+    if (n.includes('akonolinga')) return 'Akonolinga';
+    return name;
+  };
+
+  const groupStats = (statsList: { agency: { nom: string, id: string }, stats: any }[]) => {
+    const grouped = new Map<string, any>();
+    for (const item of statsList) {
+      const nom = normalizeName(item.agency.nom);
+      if (!grouped.has(nom)) {
+        grouped.set(nom, {
+          nom,
+          recettesBrutes: 0,
+          recettesClassique: 0,
+          recettesVIP: 0,
+          totalDepenses: 0,
+          totalVersements: 0,
+          netEnCaisse: 0,
+        });
+      }
+      const g = grouped.get(nom);
+      g.recettesBrutes += item.stats.recettesBrutes;
+      g.recettesClassique += item.stats.recettesClassique;
+      g.recettesVIP += item.stats.recettesVIP;
+      g.totalDepenses += item.stats.totalDepenses;
+      g.totalVersements += item.stats.totalVersements;
+      g.netEnCaisse += item.stats.netEnCaisse;
+    }
+    return Array.from(grouped.values());
+  };
+
   // Fetch for LIGNE 1
-  const ligne1Stats = await Promise.all(
+  const rawLigne1Stats = await Promise.all(
     ligne1Agencies.map(async (agency) => {
       const stats = await getNetEnCaisse(agency.id, dateRange);
       return { agency, stats };
     })
   );
+  const ligne1Stats = groupStats(rawLigne1Stats);
 
-  const totalLigne1 = ligne1Stats.reduce((acc, curr) => acc + curr.stats.recettesBrutes, 0);
-  const depensesLigne1 = ligne1Stats.reduce((acc, curr) => acc + curr.stats.totalDepenses, 0);
+  const totalLigne1 = ligne1Stats.reduce((acc, curr) => acc + curr.recettesBrutes, 0);
+  const depensesLigne1 = ligne1Stats.reduce((acc, curr) => acc + curr.totalDepenses, 0);
   const netLigne1 = totalLigne1 - depensesLigne1;
 
   // Fetch for LIGNE 2
-  const ligne2Stats = await Promise.all(
+  const rawLigne2Stats = await Promise.all(
     ligne2Agencies.map(async (agency) => {
       const stats = await getNetEnCaisse(agency.id, dateRange);
       return { agency, stats };
     })
   );
+  const ligne2Stats = groupStats(rawLigne2Stats);
 
-  const totalLigne2 = ligne2Stats.reduce((acc, curr) => acc + curr.stats.recettesBrutes, 0);
-  const depensesLigne2 = ligne2Stats.reduce((acc, curr) => acc + curr.stats.totalDepenses, 0);
+  const totalLigne2 = ligne2Stats.reduce((acc, curr) => acc + curr.recettesBrutes, 0);
+  const depensesLigne2 = ligne2Stats.reduce((acc, curr) => acc + curr.totalDepenses, 0);
   const netLigne2 = totalLigne2 - depensesLigne2;
 
   // Global
@@ -58,10 +96,10 @@ export async function SyntheseJournaliere() {
         {/* LIGNE 1 */}
         <div className="space-y-3">
           <h3 className="font-bold text-slate-700 border-b pb-1">LIGNE 1</h3>
-          {ligne1Stats.map(({ agency, stats }) => (
-            <div key={agency.id} className="text-sm pb-2 border-b border-slate-100 last:border-0">
+          {ligne1Stats.map((stats) => (
+            <div key={stats.nom} className="text-sm pb-2 border-b border-slate-100 last:border-0">
               <div className="flex justify-between font-semibold">
-                <span className="text-slate-700">{agency.nom}</span>
+                <span className="text-slate-700">{stats.nom}</span>
                 <span className="text-emerald-700">{stats.recettesBrutes.toLocaleString('fr-FR')} F</span>
               </div>
               <div className="flex justify-between text-xs text-slate-500 mt-1 pl-2">
@@ -89,10 +127,10 @@ export async function SyntheseJournaliere() {
         {/* LIGNE 2 */}
         <div className="space-y-3 md:border-l md:pl-6">
           <h3 className="font-bold text-slate-700 border-b pb-1">LIGNE 2</h3>
-          {ligne2Stats.map(({ agency, stats }) => (
-            <div key={agency.id} className="text-sm pb-2 border-b border-slate-100 last:border-0">
+          {ligne2Stats.map((stats) => (
+            <div key={stats.nom} className="text-sm pb-2 border-b border-slate-100 last:border-0">
               <div className="flex justify-between font-semibold">
-                <span className="text-slate-700">{agency.nom}</span>
+                <span className="text-slate-700">{stats.nom}</span>
                 <span className="text-emerald-700">{stats.recettesBrutes.toLocaleString('fr-FR')} F</span>
               </div>
               <div className="flex justify-between text-xs text-slate-500 mt-1 pl-2">

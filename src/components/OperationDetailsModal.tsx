@@ -84,6 +84,28 @@ export function OperationDetailsModal({ operation }: { operation: any }) {
               </p>
             </div>
           )}
+
+          {/* Détails Recettes Journalières */}
+          {operation.type === 'RECETTE' && (
+            <div className="space-y-2 sm:col-span-2 bg-emerald-50/50 p-3 rounded-lg border border-emerald-100">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <span className="text-sm text-slate-500">Type de Recette</span>
+                  <p className="font-semibold text-slate-800">
+                    <Badge variant="outline" className={operation.typeRecette === 'VIP' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}>
+                      {operation.typeRecette || 'CLASSIQUE'}
+                    </Badge>
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-sm text-slate-500">Montant Brut / Net</span>
+                  <p className="font-bold text-emerald-700">
+                    {operation.montant.toLocaleString('fr-FR')} FCFA
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Détails Achat Fournisseur */}

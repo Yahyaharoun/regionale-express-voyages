@@ -2,12 +2,13 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { unstable_cache } from "next/cache";
 import { writeAuditLog } from "@/lib/auditService";
+import { isAgentRole } from "@/lib/netEnCaisse";
 
 export class OperationRepository {
   /**
    * Fetches operations with pagination and agency scope
    */
-  static findAll = async (agencyId: string, skip: number = 0, take: number = 50, range?: string) => {
+  static findAll = async (agencyId: string, skip: number = 0, take: number = 50, range?: string, userId?: string, role?: string) => {
     let dateFilter = {};
     if (range && range !== 'all') {
       const offset = 1; 
@@ -44,6 +45,10 @@ export class OperationRepository {
     const whereClause: any = { ...dateFilter };
     if (agencyId && agencyId !== 'ALL') {
       whereClause.agencyId = agencyId;
+    }
+    
+    if (role && userId && isAgentRole(role)) {
+      whereClause.agentId = userId;
     }
 
     const results = await prisma.operation.findMany({

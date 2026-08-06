@@ -13,7 +13,7 @@ import { SyntheseJournaliere } from "@/features/recettes/SyntheseJournaliere";
 
 export default async function DepositsPage(props: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   const searchParams = await props.searchParams;
-  const range = (searchParams?.range as string) || "jour";
+  const range = (searchParams?.range as string) || "all";
   const result = await getOperations(0, 50, range);
   const user = await getCurrentUser();
   const role = user?.role || "CAISSIER";

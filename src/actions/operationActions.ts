@@ -230,7 +230,7 @@ export async function createDepositAction(formData: FormData) {
 
     const rawData = {
       montant: parseInt(formData.get("montant") as string, 10),
-      reference: formData.get("reference") as string,
+      reference: (formData.get("reference") as string) || undefined,
       bankId: formData.get("bankId") as string,
       commentaire: (formData.get("commentaire") as string) || undefined,
       agencyId: targetAgencyId,
@@ -336,7 +336,7 @@ export async function getOperations(skip: number = 0, take: number = 50, range?:
     
     if (!targetAgencyId) return { error: "Agence non trouvée" };
 
-    const operations = await OperationRepository.findAll(targetAgencyId, skip, take, range);
+    const operations = await OperationRepository.findAll(targetAgencyId, skip, take, range, dbUser.id, dbUser.role);
     return { success: true, data: operations };
   } catch (error) {
     console.error("Error fetching operations:", error);
@@ -608,11 +608,11 @@ export async function updateDepositAction(id: string, formData: FormData) {
 
     const rawData = {
       montant: parseInt(formData.get("montant") as string, 10),
-      reference: formData.get("reference") as string,
+      reference: (formData.get("reference") as string) || undefined,
       bankId: formData.get("bankId") as string,
     };
     
-    if (!rawData.montant || !rawData.bankId || !rawData.reference) {
+    if (!rawData.montant || !rawData.bankId) {
       return { error: "Données invalides." };
     }
 

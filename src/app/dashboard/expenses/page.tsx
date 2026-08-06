@@ -16,7 +16,7 @@ import { OperationListClient } from "@/features/operations/OperationListClient";
 
 export default async function ExpensesPage(props: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   const searchParams = await props.searchParams;
-  const range = (searchParams?.range as string) || "month";
+  const range = (searchParams?.range as string) || "all";
   const user = await getCurrentUser();
   let role = "CAISSIER";
   

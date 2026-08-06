@@ -426,6 +426,50 @@ export async function processLocalAIQuery(
       return { text: `🏷️ La catégorie qui a coûté le plus cher (${dateRange.label}) est **${category?.nom || 'Inconnue'}** avec un total de **${(ops[0]._sum.montant || 0).toLocaleString('fr-FR')} FCFA**.`, functionsCalled };
     }
 
+    // 7b. Historique général
+    if (msg.includes("historique") || msg.includes("liste des") || msg.includes("montre-moi les")) {
+      const isDepense = msg.includes("dépense") || msg.includes("depense");
+      const isVersement = msg.includes("versement");
+      const isRecette = msg.includes("recette");
+      const isRecent = msg.includes("récent") || msg.includes("recent") || msg.includes("dernier");
+      
+      const type = isVersement ? 'VERSEMENT' : (isDepense ? 'DEPENSE' : (isRecette ? 'RECETTE' : undefined));
+      
+      if (type) {
+        functionsCalled.push("getHistory");
+        const ops = await prisma.operation.findMany({
+          where: {
+            type,
+            createdAt: { gte: dateRange.startDate, lte: dateRange.endDate },
+            ...agencyFilter
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 5,
+          include: { bank: true, agent: true }
+        });
+        
+        if (ops.length === 0) {
+          return { text: `Aucun historique de ${type.toLowerCase()} trouvé pour la période : ${dateRange.label}.`, functionsCalled };
+        }
+        
+        let reply = `📜 **Historique des ${type.toLowerCase()}s (${dateRange.label}) :**\n\n`;
+        ops.forEach(op => {
+          const statusIcon = op.statut === 'VALIDEE' || op.statut === 'VALIDEE_DG' ? '✅' : (op.statut === 'EN_ATTENTE' ? '⏳' : '❌');
+          reply += `- ${statusIcon} **${op.montant.toLocaleString('fr-FR')} FCFA** le ${op.createdAt.toLocaleDateString('fr-FR')}`;
+          if (type === 'VERSEMENT' && op.bank) {
+            reply += ` (Banque: ${op.bank.nom})`;
+          }
+          if (op.agent) {
+            reply += ` - Saisi par ${op.agent.prenom}`;
+          }
+          reply += `\n`;
+        });
+        
+        reply += `\n*Seules les 5 opérations les plus récentes sont affichées.*`;
+        return { text: reply, functionsCalled };
+      }
+    }
+
     // 8. Opérations en attente
     if (msg.includes("en attente") || msg.includes("validation")) {
       functionsCalled.push("getPendingOperations");

@@ -9,8 +9,9 @@ export const depositSchema = z.object({
   .max(50000000, "Le montant maximum autorisé est de 50M FCFA"),
   
   reference: z.string()
-  .min(3, "La référence doit contenir au moins 3 caractères")
-  .max(100, "La référence ne peut pas dépasser 100 caractères"),
+  .max(100, "La référence ne peut pas dépasser 100 caractères")
+  .optional()
+  .nullable(),
   
   bankId: z.string().uuid("L'identifiant de la banque doit être un UUID valide"),
   
